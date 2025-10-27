@@ -19,5 +19,5 @@ D = (0.191 * ( I + 104) * (N + 1)^ 1.5) / (3.52 * (N+1)^1.5 + P -1)
 
 
 [1] https://catalogue.ceda.ac.uk/uuid/1d9929b28e79491585373e69337cee65/
+
 [2] https://www.drought.gov/data-maps-tools/keetch-byram-drought-index
-* 
