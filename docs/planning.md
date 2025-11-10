@@ -11,8 +11,9 @@ Eric:
     Model-driven model
     Task-planning
 
-Open: 
-    Frontend
+Jan: 
+    Frontend mockup
+Open:
     Documentation 
 
 
