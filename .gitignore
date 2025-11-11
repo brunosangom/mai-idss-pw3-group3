@@ -3,3 +3,8 @@
 
 # Except .gitkeep
 !/data/.gitkeep
+
+# Ignore IDE specific files
+.idea/
+
+venv/
