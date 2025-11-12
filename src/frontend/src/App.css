@@ -1,0 +1,13 @@
+.app-layout {
+  height: 100%;
+}
+
+
+.app-main {
+  background: #ffffff;
+  padding: 16px;
+  box-sizing: border-box;
+  margin-left: 200px; /* match sidebar width */
+  height: 100vh; /* enable independent scrolling */
+  overflow-y: auto;
+}
