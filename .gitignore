@@ -3,3 +3,4 @@
 
 # Except .gitkeep
 !/data/.gitkeep
+src/backend/my_secrets.py

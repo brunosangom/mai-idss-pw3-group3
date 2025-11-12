@@ -1,23 +1,28 @@
 # Model-driven approach
-* Caluclate Risk of wildfire manually using the McArthur Forest Fire Danger Index (FFDI) [1]
-* Required data : Keetch-Byram drought index [2], Formula, Temperature, humidity, ..., number of days since last rain
-
+* Calculate risk of Fire using the FWI (Forest Fire Weather Index) system.
+* 
+* Advantages
+  * integrations multiple weather parameters in a single measure of fire potential
+  * widely used and accepted in wildfire management worldwide [1]
+  * data availability from standard meteorological observations
+  * Easier to implement compared to more complex models
+* Disadvantes
+  * In the US FWI is less used than NFDRS (National Fire Danger Rating System) -> may limit adoption to US
+  * Simplified Assumptions
+  * Daily resolution
+  * Does not take in account the ignition likelihood 
 ## Calculation
-FFDI = 1.25 * D * exp [ (T - H)/30.0 + 0.0234 * V]
+* Input data
+  * Air Temperature (°C)
+  * Relative Humidity (%)
+  * Wind Speed (km/hr)
+  * Precipitation (mm/day)
+* Intermediate Components (estimated based on input data, especially precipitation)
+  * Fine Fuel Moisture Code (FFMC): moisture content of litter and other cured fine fuels
+  * Duff Moisture Code (DMC): moisture content of loosely compacted organic layers of moderate depth
+  * Drought Code (DC): moisture content of deep, compact organic layers
+* Fire behavior indices
+  * Initial Spread Index (ISI): rate of fire spread
+  * Build Up Index (BUI): amount of fuel available for combustion
 
-Where:
-- D = drought factor,
-- T = Temperature (ºC),
-- H = humidity (%), and
-- V = wind speed (km hr-1).
-
-D = (0.191 * ( I + 104) * (N + 1)^ 1.5) / (3.52 * (N+1)^1.5 + P -1)
-
-- P = precipitation (mm day-1),
-- N = number of days since last rain, and
-- I is based on Keetch-Byram drought index.
-
-
-[1] https://catalogue.ceda.ac.uk/uuid/1d9929b28e79491585373e69337cee65/
-
-[2] https://www.drought.gov/data-maps-tools/keetch-byram-drought-index
+[1] NOTE: NOT PEER REVIEWD- find better source for report :) Janine A. Baijnath-Rodino, Efi Foufoula-Georgiou, Tirtha Banerjee. Reviewing the “Hottest” Fire Indices Worldwide. ESS Open Archive . July 31, 2020. 
