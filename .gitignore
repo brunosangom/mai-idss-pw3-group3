@@ -3,4 +3,9 @@
 
 # Except .gitkeep
 !/data/.gitkeep
+
+# Ignore IDE specific files
+.idea/
+
+venv/
 src/backend/my_secrets.py
