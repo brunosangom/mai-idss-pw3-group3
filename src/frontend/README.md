@@ -1,26 +1,41 @@
-## Available Scripts
+## Frontend (React) – Setup and Usage
 
-In the project directory, you can run:
+### Prerequisites
+- Node.js 18 LTS or 20+ (recommended)
+- npm 9+ (bundled with Node)
 
-### `npm start`
+Check your versions:
+```
+node -v
+npm -v
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Install dependencies
+```
+cd src\frontend
+npm install
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
 
-### `npm test`
+### Run the dev server
+```
+cd src\frontend
+npm start
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Then open http://localhost:3000.
 
-### `npm run build`
+### Build for production
+```
+npm run build
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Outputs an optimized `build/` directory.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Available scripts
+```
+npm start      # start dev server (http://localhost:3000)
+npm test       # run tests in watch mode
+npm run build  # production build to ./build
+npm run eject  # CRA eject (irreversible)
+```
