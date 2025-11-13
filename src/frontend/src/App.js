@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import Sidebar from './components/Sidebar';
 import { Routes, Route } from 'react-router-dom';
@@ -10,9 +10,21 @@ import MapPage from './pages/MapPage';
 import NotFound from './pages/NotFound';
 
 function App() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    setCollapsed(mq.matches);
+    const handler = (e) => setCollapsed(e.matches);
+    mq.addEventListener ? mq.addEventListener('change', handler) : mq.addListener(handler);
+    return () => {
+      mq.removeEventListener ? mq.removeEventListener('change', handler) : mq.removeListener(handler);
+    };
+  }, []);
+
   return (
-    <div className="app-layout">
-      <Sidebar />
+    <div className={`app-layout ${collapsed ? 'sidebar-collapsed' : ''}`}>
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
       <main className="app-main">
         <Routes>
           <Route path="/" element={<Overview />} />

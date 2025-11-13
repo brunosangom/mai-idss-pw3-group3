@@ -8,6 +8,10 @@
   padding: 16px;
   box-sizing: border-box;
   margin-left: 200px; /* match sidebar width */
-  height: 100vh; /* enable independent scrolling */
+  height: 100vh; 
   overflow-y: auto;
+  transition: margin-left 0.2s ease;
 }
+
+/* Collapsed baseline */
+.app-layout.sidebar-collapsed .app-main { margin-left: 56px; }

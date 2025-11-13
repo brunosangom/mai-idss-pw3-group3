@@ -12,6 +12,7 @@
 	width: 200px;
 	height: 100vh;
 	overflow-y: auto; 
+	transition: width 0.2s ease;
 }
 
 .sidebar h2 {
@@ -19,6 +20,27 @@
 	font-weight: 600;
 	margin: 0 0 8px;
 }
+
+.sidebar-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.sidebar-toggle {
+	border: 1px solid #f1f5f9; 
+	background: #ffffff;
+	color: #111827;
+	border-radius: 6px;
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+.sidebar-toggle:hover { background: #f9fafb; border-color: #d1d5db; }
 
 .sidebar nav ul {
 	list-style: none;
@@ -35,20 +57,22 @@
 
 .sidebar nav a {
 	text-decoration: none;
-	color: #374151;
+	color: #111827; 
 	font-size: 0.9rem;
-	display: block;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	width: 100%;
 	box-sizing: border-box;
 	padding: 8px 10px;
 	border: 1px solid #e5e7eb;
 	border-radius: 6px;
-	background: #ffffff;
+	background: #f8fafc;
 	transition: background 0.15s, border-color 0.15s;
 }
 
 .sidebar nav a:hover {
-	background: #f9fafb;
+	background: #f1f5f9;
 	border-color: #d1d5db;
 }
 
@@ -57,4 +81,43 @@
 	background: #f3f4f6;
 	border-color: #d1d5db;
 	font-weight: 600;
+}
+
+/* Icon sizing aligns with text; inherits currentColor */
+.sidebar-icon {
+	width: 18px;
+	height: 18px;
+	flex: 0 0 18px;
+	color: currentColor;
+}
+.sidebar-label { line-height: 1; }
+
+.sidebar-divider {
+	height: 1px;
+	background: #e5e7eb;
+	width: 100%;
+	margin: 4px 0 8px;
+}
+
+/* Collapsed state: narrow, hide labels and title; center icons */
+.app-layout.sidebar-collapsed .sidebar { width: 56px; }
+.app-layout.sidebar-collapsed .sidebar h2 { display: none; }
+.app-layout.sidebar-collapsed .sidebar .sidebar-label { display: none; }
+.app-layout.sidebar-collapsed .sidebar .sidebar-header { justify-content: center; }
+.app-layout.sidebar-collapsed .sidebar .sidebar-toggle { margin-left: auto; margin-right: auto; }
+.app-layout.sidebar-collapsed .sidebar nav ul { align-items: center; }
+.app-layout.sidebar-collapsed .sidebar nav li { width: auto; }
+.app-layout.sidebar-collapsed .sidebar nav a {
+	justify-content: center;
+	gap: 0;
+	width: 32px;
+	height: 32px;
+	padding: 6px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.app-layout.sidebar-collapsed .sidebar .sidebar-icon {
+	width: 20px;
+	height: 20px;
+	flex: 0 0 20px;
 }
