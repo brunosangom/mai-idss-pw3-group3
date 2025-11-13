@@ -1,54 +1,31 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+
+import SidebarItem from './SidebarItem';
+import { FiHome, FiBarChart2, FiTrendingUp, FiClock, FiMap, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import './Sidebar.css';
 
-function Sidebar() {
+function Sidebar({ collapsed = false, onToggle }) {
   return (
-    <div className="sidebar">
-      <h2>Wildfire Dashboard</h2>
+    <div className={`sidebar ${collapsed ? 'is-collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <h2>Wildfire Dashboard</h2>
+        <button
+          type="button"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="sidebar-toggle"
+          onClick={onToggle}
+        >
+          {collapsed ? <FiChevronRight className="sidebar-icon" /> : <FiChevronLeft className="sidebar-icon" />}
+        </button>
+      </div>
+      <div className="sidebar-divider" aria-hidden="true" />
       <nav>
         <ul>
-          <li>
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) => isActive ? 'sidebar-link sidebar-link--active' : 'sidebar-link'}
-            >
-              Overview
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/statistics"
-              className={({ isActive }) => isActive ? 'sidebar-link sidebar-link--active' : 'sidebar-link'}
-            >
-              Statistics
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/forecast"
-              className={({ isActive }) => isActive ? 'sidebar-link sidebar-link--active' : 'sidebar-link'}
-            >
-              Forecast
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/historical"
-              className={({ isActive }) => isActive ? 'sidebar-link sidebar-link--active' : 'sidebar-link'}
-            >
-              Historical Data
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/map"
-              className={({ isActive }) => isActive ? 'sidebar-link sidebar-link--active' : 'sidebar-link'}
-            >
-              Map
-            </NavLink>
-          </li>
+          <SidebarItem to="/" end icon={FiHome} label="Overview" />
+          <SidebarItem to="/statistics" icon={FiBarChart2} label="Statistics" />
+          <SidebarItem to="/forecast" icon={FiTrendingUp} label="Forecast" />
+          <SidebarItem to="/historical" icon={FiClock} label="Historical Data" />
+          <SidebarItem to="/map" icon={FiMap} label="Map" />
         </ul>
       </nav>
     </div>
