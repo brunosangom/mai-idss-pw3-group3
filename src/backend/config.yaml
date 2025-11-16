@@ -1,0 +1,53 @@
+
+# Data configuration
+data:
+  path: "data/Wildfire_Dataset.csv"
+  features:
+    - "pr"
+    - "rmax"
+    - "rmin"
+    - "sph"
+    - "srad"
+    - "tmmn"
+    - "tmmx"
+    - "vs"
+    - "bi"
+    - "fm100"
+    - "fm1000"
+    - "erc"
+    - "etr"
+    - "pet"
+    - "vpd"
+  split_ratios:
+    train: 0.6
+    val: 0.2
+    test: 0.2
+
+# Model configuration
+model:
+  name: "Transformer"
+  params:
+    d_model: 512
+    nhead: 8
+    num_encoder_layers: 6
+    num_decoder_layers: 6
+    dim_feedforward: 2048
+    dropout: 0.1
+
+# Training configuration
+training:
+  window_size: 10
+  batch_size: 32
+  epochs: 100
+  learning_rate: 0.001
+  loss_function: "BCE"
+  optimizer: "Adam"
+  metrics:
+    - "Precision"
+    - "Recall"
+    - "F1Score"
+
+# System configuration
+system:
+  log_file: "logs/experiment.log"
+  checkpoint_path: "checkpoints/best_model.pt"
