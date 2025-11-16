@@ -3,3 +3,6 @@ pandas
 xarray
 numpy
 xclim
+pyyaml
+torch --extra-index-url https://download.pytorch.org/whl/cu128
+torchmetrics
