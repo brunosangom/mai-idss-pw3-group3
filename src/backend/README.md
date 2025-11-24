@@ -37,6 +37,23 @@ python src/backend/main.py --config src/backend/config.yaml
 - Training and validation progress will be logged to `src/backend/logs/experiment.log`.
 - The best performing model on the validation set will be saved to `src/backend/checkpoints/best_model.pt`.
 
+### Running the Flask API
+
+To start the Flask API server:
+
+```bash
+cd src/backend
+flask --app app run --debug
+```
+
+The API will be available at `http://localhost:5000` by default. The `--debug` flag enables hot reloading when code changes are saved.
+
+#### Available Endpoints:
+
+- `GET /` - Root endpoint with API information
+- `GET /api/health` - Health check endpoint
+- TODO
+
 ## Backend Implementation
 
 The backend is structured into several key components, each responsible for a specific part of the experiment pipeline.
