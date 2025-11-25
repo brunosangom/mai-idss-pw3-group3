@@ -22,23 +22,24 @@ data:
     train: 0.6
     val: 0.2
     test: 0.2
+  window_size: 10
 
 # Model configuration
 model:
   name: "Transformer"
   params:
-    d_model: 512
-    nhead: 8
-    num_encoder_layers: 6
-    num_decoder_layers: 6
-    dim_feedforward: 2048
+    d_model: 32
+    nhead: 4
+    num_encoder_layers: 2
+    num_decoder_layers: 2
+    dim_feedforward: 512
     dropout: 0.1
 
 # Training configuration
 training:
-  window_size: 10
   batch_size: 32
-  epochs: 100
+  epochs: 1
+  max_steps_per_epoch: 1000
   learning_rate: 0.001
   loss_function: "BCE"
   optimizer: "Adam"
@@ -49,5 +50,6 @@ training:
 
 # System configuration
 system:
-  log_file: "logs/experiment.log"
-  checkpoint_path: "checkpoints/best_model.pt"
+  log_dir: "src/backend/logs/"
+  checkpoint_path: "src/backend/checkpoints/best_model.pt"
+  verbose: True

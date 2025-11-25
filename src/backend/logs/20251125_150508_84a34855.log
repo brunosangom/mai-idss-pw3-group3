@@ -1,0 +1,37 @@
+2025-11-25 15:05:08,909 - __main__ - INFO - Loaded configuration from src/backend/config.yaml
+2025-11-25 15:05:08,909 - __main__ - DEBUG - Configuration: {'data': {'path': 'data/Wildfire_Dataset.csv', 'features': ['pr', 'rmax', 'rmin', 'sph', 'srad', 'tmmn', 'tmmx', 'vs', 'bi', 'fm100', 'fm1000', 'erc', 'etr', 'pet', 'vpd'], 'split_ratios': {'train': 0.6, 'val': 0.2, 'test': 0.2}, 'window_size': 10}, 'model': {'name': 'Transformer', 'params': {'d_model': 32, 'nhead': 4, 'num_encoder_layers': 2, 'num_decoder_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}}, 'training': {'batch_size': 32, 'epochs': 1, 'max_steps_per_epoch': 1000, 'learning_rate': 0.001, 'loss_function': 'BCE', 'optimizer': 'Adam', 'metrics': ['Precision', 'Recall', 'F1Score']}, 'system': {'log_dir': 'src/backend/logs/', 'checkpoint_path': 'src/backend/checkpoints/best_model.pt', 'verbose': True}}
+2025-11-25 15:05:10,466 - trainer - INFO - Using CUDA device: NVIDIA GeForce RTX 4060 Laptop GPU
+2025-11-25 15:05:10,466 - trainer - INFO - Initializing datasets...
+2025-11-25 15:05:10,466 - dataset - INFO - No cached data found, running preprocessing pipeline...
+2025-11-25 15:05:10,466 - dataset - INFO - Loading data from data/Wildfire_Dataset.csv
+2025-11-25 15:05:20,706 - dataset - DEBUG - Loaded dataframe with shape (9509925, 19)
+2025-11-25 15:05:20,706 - dataset - INFO - Preprocessing data for all splits
+2025-11-25 15:05:28,112 - dataset - INFO - Dropping 343 groups with all constant features
+2025-11-25 15:05:40,197 - dataset - INFO - 
+============================================================
+Constant Column Summary (columns with std=0 set to zero)
+============================================================
+Feature                             Count      Percentage
+------------------------------------------------------------
+pr                                   1032           2.81%
+============================================================
+
+2025-11-25 15:07:04,696 - dataset - INFO - Saved train split (5690520 rows) to data\preprocessed_cache\train_41ce5cb275e9.csv
+2025-11-25 15:07:31,537 - dataset - INFO - Saved val split (1896840 rows) to data\preprocessed_cache\val_41ce5cb275e9.csv
+2025-11-25 15:07:58,594 - dataset - INFO - Saved test split (1896840 rows) to data\preprocessed_cache\test_41ce5cb275e9.csv
+2025-11-25 15:07:58,599 - dataset - INFO - Preprocessed data cached with key: 41ce5cb275e9
+2025-11-25 15:07:59,972 - dataset - INFO - Creating sequences for 36755 groups in split 'train'
+2025-11-25 15:08:34,473 - dataset - DEBUG - Created 5322970 sequences for split train
+2025-11-25 15:08:35,363 - dataset - INFO - Creating sequences for 36755 groups in split 'val'
+2025-11-25 15:08:51,661 - dataset - DEBUG - Created 1529290 sequences for split val
+2025-11-25 15:08:52,418 - dataset - INFO - Creating sequences for 36755 groups in split 'test'
+2025-11-25 15:09:09,621 - dataset - DEBUG - Created 1529290 sequences for split test
+2025-11-25 15:09:09,676 - trainer - DEBUG - Train dataset initialized with 5322970 samples.
+2025-11-25 15:09:09,676 - trainer - DEBUG - Val dataset initialized with 1529290 samples.
+2025-11-25 15:09:09,676 - trainer - DEBUG - Test dataset initialized with 1529290 samples.
+2025-11-25 15:09:09,679 - trainer - INFO - Number of features: 18
+2025-11-25 15:09:09,679 - trainer - INFO - Initializing model...
+2025-11-25 15:09:09,679 - trainer - DEBUG - Model parameters: {'d_model': 32, 'nhead': 4, 'num_encoder_layers': 2, 'num_decoder_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}
+2025-11-25 15:09:11,302 - trainer - INFO - Model Transformer initialized and moved to cuda.
+2025-11-25 15:09:12,701 - trainer - INFO - Training components initialized.
+2025-11-25 15:09:12,701 - trainer - INFO - Starting training...

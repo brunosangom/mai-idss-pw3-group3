@@ -8,7 +8,7 @@ class MetricsCollection:
         self.buffer = {'preds': [], 'target': []}
 
     def _create_metrics(self):
-        metric_names = self.config.get('training', {}).get('metrics', [])
+        metric_names = self.config.get_training_config().get('metrics', [])
         metrics = []
         for name in metric_names:
             if name == "Precision":

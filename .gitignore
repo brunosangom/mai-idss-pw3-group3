@@ -9,3 +9,5 @@
 
 venv/
 src/backend/my_secrets.py
+
+__pycache__
