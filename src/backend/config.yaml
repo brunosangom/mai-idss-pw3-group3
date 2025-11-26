@@ -43,6 +43,7 @@ training:
   learning_rate: 0.001
   loss_function: "BCE"
   optimizer: "Adam"
+  tune_threshold: True  # If True, tunes threshold on validation set based on F1 score after training
   metrics:
     - "Precision"
     - "Recall"

@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 import logging
 import os
+import numpy as np
 from tqdm import tqdm
 import torchmetrics
 
@@ -19,6 +20,7 @@ class Trainer:
         self.training_config = config.get_training_config()
         self.system_config = config.get_system_config()
         self.threshold = self.model_config.get('threshold', 0.5)
+        self.tune_threshold = self.training_config.get('tune_threshold', False)
 
         self._setup_logging()
         self._setup_device()
@@ -143,6 +145,7 @@ class Trainer:
 
     def train(self):
         self.logger.info("Starting training...")
+        self.logger.info(f"Threshold used for metrics during training: {self.threshold}")
         max_steps = self.training_config.get('max_steps_per_epoch', None)
         
         for epoch in range(self.training_config['epochs']):
@@ -179,6 +182,10 @@ class Trainer:
             self._validate(epoch)
         
         self.logger.info("Training finished.")
+        
+        if self.tune_threshold:
+            self._tune_threshold()
+        
         self._test()
 
     def _validate(self, epoch):
@@ -221,6 +228,67 @@ class Trainer:
         os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
         torch.save(self.model.state_dict(), checkpoint_path)
         self.logger.info(f"Saved new best model to {checkpoint_path}")
+
+    def _collect_predictions(self, data_loader, desc="Collecting predictions"):
+        """Collect all predictions and labels from a data loader."""
+        self.model.eval()
+        all_probs = []
+        all_labels = []
+        
+        with torch.no_grad():
+            pbar = tqdm(data_loader, desc=desc, leave=True)
+            for sequences, labels in pbar:
+                sequences, labels = sequences.to(self.device), labels.to(self.device)
+                
+                # Prepare targets by shifting labels right and adding a start token (zero)
+                zero_tensor = torch.zeros(labels.size(0), 1, dtype=labels.dtype, device=labels.device)
+                targets = torch.cat([zero_tensor, labels[:, :-1]], dim=1)
+                
+                outputs = self._forward(sequences, targets)
+                
+                # We only care about the last time step
+                all_probs.append(outputs[:, -1].cpu().numpy())
+                all_labels.append(labels[:, -1].cpu().numpy())
+        
+        return np.concatenate(all_probs), np.concatenate(all_labels)
+
+    def _tune_threshold(self):
+        """Tune the classification threshold based on F1 score using validation data."""
+        self.logger.info("Tuning threshold based on F1 score...")
+        
+        # Load best model
+        self.model.load_state_dict(torch.load(self.system_config['checkpoint_path'], map_location=self.device))
+        
+        # Collect predictions on validation set
+        y_probs, y_true = self._collect_predictions(self.val_loader, desc="Collecting validation predictions")
+        
+        # Search for optimal threshold
+        thresholds = np.linspace(0.01, 0.99, 99)
+        best_f1 = 0
+        best_threshold = 0.5
+        
+        for thresh in thresholds:
+            y_pred = (y_probs >= thresh).astype(int)
+            
+            # Calculate F1 score
+            tp = np.sum((y_pred == 1) & (y_true == 1))
+            fp = np.sum((y_pred == 1) & (y_true == 0))
+            fn = np.sum((y_pred == 0) & (y_true == 1))
+            
+            precision = tp / (tp + fp + 1e-8)
+            recall = tp / (tp + fn + 1e-8)
+            f1 = 2 * (precision * recall) / (precision + recall + 1e-8)
+            
+            if f1 > best_f1:
+                best_f1 = f1
+                best_threshold = thresh
+        
+        self.logger.info(f"Optimal threshold: {best_threshold:.4f} (F1: {best_f1:.4f})")
+        
+        # Update threshold and recreate metrics with new threshold
+        self.threshold = best_threshold
+        self.metrics = self._create_metrics()
+        self.logger.info(f"Threshold updated to {self.threshold:.4f}")
 
     def _test(self):
         self.logger.info("Starting testing...")

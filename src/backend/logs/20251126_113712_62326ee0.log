@@ -1,0 +1,35 @@
+2025-11-26 11:37:12,445 - __main__ - INFO - Loaded configuration from src/backend/config.yaml
+2025-11-26 11:37:12,445 - __main__ - DEBUG - Configuration: {'data': {'path': 'data/Wildfire_Dataset.csv', 'features': ['pr', 'rmax', 'rmin', 'sph', 'srad', 'tmmn', 'tmmx', 'vs', 'bi', 'fm100', 'fm1000', 'erc', 'etr', 'pet', 'vpd'], 'split_ratios': {'train': 0.6, 'val': 0.2, 'test': 0.2}, 'window_size': 10}, 'model': {'name': 'Transformer', 'params': {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}, 'threshold': 0.01}, 'training': {'batch_size': 32, 'epochs': 1, 'max_steps_per_epoch': 1000, 'learning_rate': 0.001, 'loss_function': 'BCE', 'optimizer': 'Adam', 'tune_threshold': True, 'metrics': ['Precision', 'Recall', 'F1Score']}, 'system': {'log_dir': 'src/backend/logs/', 'checkpoint_path': 'src/backend/checkpoints/best_model.pt', 'verbose': True}}
+2025-11-26 11:37:13,970 - trainer - INFO - Using CUDA device: NVIDIA GeForce RTX 4060 Laptop GPU
+2025-11-26 11:37:13,971 - trainer - INFO - Initializing datasets...
+2025-11-26 11:37:13,971 - dataset - INFO - Found cached preprocessed data, loading from cache...
+2025-11-26 11:37:13,971 - dataset - INFO - Loading preprocessed data from cache (key: 41ce5cb275e9)
+2025-11-26 11:37:26,594 - dataset - INFO - Loaded train split (5690520 rows) from cache
+2025-11-26 11:37:30,793 - dataset - INFO - Loaded val split (1896840 rows) from cache
+2025-11-26 11:37:35,149 - dataset - INFO - Loaded test split (1896840 rows) from cache
+2025-11-26 11:37:36,919 - dataset - INFO - Creating sequences for 36755 groups in split 'train'
+2025-11-26 11:38:09,545 - dataset - DEBUG - Created 5322970 sequences for split train
+2025-11-26 11:38:10,322 - dataset - INFO - Creating sequences for 36755 groups in split 'val'
+2025-11-26 11:38:26,831 - dataset - DEBUG - Created 1529290 sequences for split val
+2025-11-26 11:38:27,597 - dataset - INFO - Creating sequences for 36755 groups in split 'test'
+2025-11-26 11:38:45,082 - dataset - DEBUG - Created 1529290 sequences for split test
+2025-11-26 11:38:45,151 - trainer - DEBUG - Train dataset initialized with 5322970 samples.
+2025-11-26 11:38:45,151 - trainer - DEBUG - Val dataset initialized with 1529290 samples.
+2025-11-26 11:38:45,151 - trainer - DEBUG - Test dataset initialized with 1529290 samples.
+2025-11-26 11:38:45,152 - trainer - INFO - Number of features: 18
+2025-11-26 11:38:45,152 - trainer - INFO - Initializing model...
+2025-11-26 11:38:45,152 - trainer - DEBUG - Model parameters: {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}
+2025-11-26 11:38:46,749 - trainer - INFO - Model Transformer initialized and moved to device: cuda.
+2025-11-26 11:38:48,098 - trainer - INFO - Training components initialized.
+2025-11-26 11:38:48,098 - trainer - INFO - Starting training...
+2025-11-26 11:38:55,625 - trainer - INFO - Epoch 1 - Train Loss: 0.0002, Metrics: {'BinaryPrecision': tensor(0.0199, device='cuda:0'), 'BinaryRecall': tensor(0.9298, device='cuda:0'), 'BinaryF1Score': tensor(0.0389, device='cuda:0')}
+2025-11-26 11:38:57,683 - trainer - INFO - Epoch 1 - Validation Loss: 0.0000, Metrics: {'BinaryPrecision': tensor(0., device='cuda:0'), 'BinaryRecall': tensor(0., device='cuda:0'), 'BinaryF1Score': tensor(0., device='cuda:0')}
+2025-11-26 11:38:57,696 - trainer - INFO - Saved new best model to src/backend/checkpoints/best_model.pt
+2025-11-26 11:38:57,696 - trainer - INFO - Training finished.
+2025-11-26 11:38:57,696 - trainer - INFO - Tuning threshold based on F1 score...
+2025-11-26 11:39:52,515 - trainer - INFO - Optimal threshold: 0.3900 (F1: 0.7292)
+2025-11-26 11:39:52,518 - trainer - INFO - Threshold updated to 0.3900
+2025-11-26 11:39:52,520 - trainer - INFO - Starting testing...
+2025-11-26 11:41:31,526 - trainer - INFO - Test Loss: 0.0797, Metrics: {'BinaryPrecision': tensor(0.9951, device='cuda:0'), 'BinaryRecall': tensor(0.9233, device='cuda:0'), 'BinaryF1Score': tensor(0.9578, device='cuda:0')}
+2025-11-26 11:41:31,526 - trainer - INFO - Testing finished.
+2025-11-26 11:41:31,526 - __main__ - INFO - Total execution time: 259.08 seconds
