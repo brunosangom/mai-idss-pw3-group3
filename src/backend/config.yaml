@@ -19,10 +19,10 @@ data:
     - "pet"
     - "vpd"
   split_ratios:
-    train: 0.6
-    val: 0.2
-    test: 0.2
-  window_size: 10
+    train: 0.8
+    val: 0.1
+    test: 0.1
+  window_size: 30
 
 # Model configuration
 model:
