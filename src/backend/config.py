@@ -17,3 +17,7 @@ class ExperimentConfig:
 
     def get_system_config(self):
         return self.config['system']
+
+    def get_seed(self):
+        """Get the random seed for reproducibility. Returns None if not set."""
+        return self.config.get('system', {}).get('seed', None)

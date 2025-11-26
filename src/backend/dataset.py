@@ -294,6 +294,7 @@ class WildfireDataset(Dataset):
         # Create sequences using optimized approach
         sequences = []
         labels = []
+        metadata = []  # Store (latitude, longitude, datetime) for each sequence's last time step
         
         # Group the split data and process efficiently
         grouped = split_df.groupby('_group_id')
@@ -306,6 +307,11 @@ class WildfireDataset(Dataset):
             # Extract feature values and labels as numpy arrays (single conversion)
             features = group[feature_cols].values.astype(np.float32)
             labels_arr = group['Wildfire'].values
+            
+            # Extract metadata columns
+            lat_arr = group['latitude'].values
+            lon_arr = group['longitude'].values
+            datetime_arr = group['datetime'].values
             
             # Use sliding window view for efficient sequence creation (no copy!)
             num_sequences = n - self.window_size + 1
@@ -320,16 +326,28 @@ class WildfireDataset(Dataset):
             for i in range(num_sequences - 1):  # -1 to match original behavior
                 sequences.append(torch.from_numpy(feature_windows[i].copy()))
                 labels.append(torch.from_numpy(label_windows[i].copy()))
+                # Store metadata for the last time step of this sequence (index i + window_size - 1)
+                last_idx = i + self.window_size - 1
+                metadata.append((lat_arr[last_idx], lon_arr[last_idx], datetime_arr[last_idx]))
         
         self.logger.debug(f"Created {len(sequences)} sequences for split {self.split}")
         self.sequences = sequences
         self.labels = labels
+        self.metadata = metadata
 
     def __len__(self):
         return len(self.sequences)
 
     def __getitem__(self, idx):
         return self.sequences[idx], self.labels[idx]
+
+    def get_metadata(self, idx):
+        """Get metadata (latitude, longitude, datetime) for a sequence."""
+        return self.metadata[idx]
+
+    def get_all_metadata(self):
+        """Get all metadata as a list of tuples (latitude, longitude, datetime)."""
+        return self.metadata
 
     def get_num_features(self):
         if len(self.sequences) == 0:

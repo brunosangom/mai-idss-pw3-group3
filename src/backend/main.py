@@ -22,8 +22,10 @@ def main():
     # Setup logging with datetime and unique hash
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     unique_id = uuid.uuid4().hex[:8]
-    log_dir = system_config.get('log_dir', 'src/backend/logs')  
-    log_file = os.path.join(log_dir, f'{timestamp}_{unique_id}.log')
+    log_dir = system_config.get('log_dir', 'src/backend/logs')
+    experiment_id = f"{timestamp}_{unique_id}"
+    system_config['experiment_id'] = experiment_id
+    log_file = os.path.join(log_dir, f'{experiment_id}.log')
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     
     verbose = system_config.get('verbose', False)

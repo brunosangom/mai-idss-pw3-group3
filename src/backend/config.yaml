@@ -48,9 +48,13 @@ training:
     - "Precision"
     - "Recall"
     - "F1Score"
+    - TrueWildfires
+    - PredictedWildfires
 
 # System configuration
 system:
+  seed: 42  # Random seed for reproducibility (set to null to disable)
   log_dir: "src/backend/logs/"
+  results_dir: "src/backend/results/"
   checkpoint_path: "src/backend/checkpoints/best_model.pt"
   verbose: True
