@@ -6,9 +6,11 @@ from trainer import Trainer
 import logging
 import os
 import uuid
+import time
 from datetime import datetime
 
 def main():
+    start_time = time.time()
     parser = argparse.ArgumentParser(description="Wildfire Prediction Experiment")
     parser.add_argument('--config', type=str, default='config.yaml',
                         help='Path to the experiment configuration file.')
@@ -20,7 +22,7 @@ def main():
     # Setup logging with datetime and unique hash
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     unique_id = uuid.uuid4().hex[:8]
-    log_dir = system_config.get('log_dir', 'src/backend/logs')
+    log_dir = system_config.get('log_dir', 'src/backend/logs')  
     log_file = os.path.join(log_dir, f'{timestamp}_{unique_id}.log')
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     
@@ -40,6 +42,9 @@ def main():
 
     trainer = Trainer(config)
     trainer.train()
+    
+    elapsed_time = time.time() - start_time
+    logger.info(f"Total execution time: {elapsed_time:.2f} seconds")
 
 if __name__ == '__main__':
     main()

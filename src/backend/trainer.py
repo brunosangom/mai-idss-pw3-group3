@@ -18,6 +18,7 @@ class Trainer:
         self.model_config = config.get_model_config()
         self.training_config = config.get_training_config()
         self.system_config = config.get_system_config()
+        self.threshold = self.model_config.get('threshold', 0.5)
 
         self._setup_logging()
         self._setup_device()
@@ -58,17 +59,29 @@ class Trainer:
             params = self.model_config['params']
             self.logger.debug(f"Model parameters: {params}")
             d_model = params['d_model']
-            # Input embedding layer to transform from num_features to d_model
-            self.input_embedder = nn.Linear(self.num_features, d_model)
+            nhead = params['nhead']
+            num_layers = params['num_layers']
+
+            # Source embedding layer to transform from num_features to d_model
+            self.source_embedder = nn.Linear(self.num_features, d_model)
+
+            # Target embedding layer to transform from binary labels to d_model
+            self.target_embedder = nn.Embedding(num_embeddings=2, embedding_dim=d_model)
+
+            # Positional embedding to add positional information to the input sequences
+            self.pos_emb = nn.Parameter(torch.randn(1, self.data_config['window_size'], d_model)).to(self.device)
+
             # The output of the transformer will be of shape (batch, seq_len, d_model)
+            encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
+            self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+
             # We need a linear layer to map this to a single output for binary classification
-            self.transformer_model = nn.Transformer(**params)
             self.output_layer = nn.Sequential(
                 nn.Linear(d_model, 1),
                 nn.Sigmoid()
             )
             # Combine all components into a ModuleList for proper parameter tracking
-            self.model = nn.ModuleList([self.input_embedder, self.transformer_model, self.output_layer])
+            self.model = nn.ModuleList([self.source_embedder, self.target_embedder, self.transformer, self.output_layer])
         else:
             self.logger.error(f"Model {model_name} not supported.")
             raise ValueError(f"Model {model_name} not supported.")
@@ -98,31 +111,34 @@ class Trainer:
         metrics = []
         for name in metric_names:
             if name == "Precision":
-                metrics.append(torchmetrics.Precision(task="binary"))
+                metrics.append(torchmetrics.Precision(task="binary", threshold=self.threshold))
             elif name == "Recall":
-                metrics.append(torchmetrics.Recall(task="binary"))
+                metrics.append(torchmetrics.Recall(task="binary", threshold=self.threshold))
             elif name == "F1Score":
-                metrics.append(torchmetrics.F1Score(task="binary"))
+                metrics.append(torchmetrics.F1Score(task="binary", threshold=self.threshold))
             else:
                 raise ValueError(f"Metric {name} not supported.")
         return torchmetrics.MetricCollection(metrics).to(self.device)
 
-    def _forward(self, sequences):
-        """Forward pass through the model with embedding layer."""
-        # Transformer expects (seq_len, batch, features)
-        sequences = sequences.permute(1, 0, 2)
+    def _forward(self, sequences, targets):
+        """Forward pass through the model with embedding layer."""    
+        # Apply source embedding to transform from num_features to d_model
+        embedded_source = self.source_embedder(sequences) # (batch, seq_len, d_model)
+
+        # Apply target embedding to transform from binary labels to d_model
+        embedded_targets = self.target_embedder(targets) # (batch, seq_len, d_model)
+
+        # Combine source, target embeddings and positional embeddings
+        input = embedded_source + embedded_targets + self.pos_emb # (batch, seq_len, d_model)
         
-        # Apply input embedding to transform from num_features to d_model
-        embedded = self.input_embedder(sequences)
-        
-        # For a transformer, source and target can be the same for this task @todo: verify, maybe use wildfire history as target
-        transformer_out = self.transformer_model(embedded, embedded)
+        # For a transformer, source and target can be the same for this task
+        transformer_out = self.transformer(input) # (batch, seq_len, d_model)
         
         # Apply output layer
-        outputs = self.output_layer(transformer_out)
+        outputs = self.output_layer(transformer_out) # (batch, seq_len, 1)
         
-        # Reshape outputs for loss calculation: (seq_len, batch, 1) -> (batch, seq_len)
-        outputs = outputs.permute(1, 0, 2).squeeze(-1)
+        # Reshape outputs for loss calculation
+        outputs = outputs.squeeze(-1) # (batch, seq_len)
         return outputs
 
     def train(self):
@@ -141,13 +157,19 @@ class Trainer:
                 sequences, labels = sequences.to(self.device), labels.to(self.device)
                 self.optimizer.zero_grad()
                 
-                outputs = self._forward(sequences)
+                # Prepare targets by shifting labels right and adding a start token (zero)
+                zero_tensor = torch.zeros(labels.size(0), 1, dtype=labels.dtype, device=labels.device)
+                targets = torch.cat([zero_tensor, labels[:, :-1]], dim=1)
+                
+                outputs = self._forward(sequences, targets) # (batch, seq_len)
 
+                labels = labels.float()
                 loss = self.loss_fn(outputs, labels)
                 loss.backward()
                 self.optimizer.step()
                 
-                self.metrics.update(outputs, labels)
+                # We only care about the last time step for metrics
+                self.metrics.update(outputs[:, -1], labels[:, -1])
                 train_pbar.set_postfix(loss=f"{loss.item():.4f}")
 
             train_metrics = self.metrics.compute()
@@ -170,12 +192,19 @@ class Trainer:
                 if max_steps is not None and step >= max_steps:
                     break
                 sequences, labels = sequences.to(self.device), labels.to(self.device)
-                outputs = self._forward(sequences)
                 
+                # Prepare targets by shifting labels right and adding a start token (zero)
+                zero_tensor = torch.zeros(labels.size(0), 1, dtype=labels.dtype, device=labels.device)
+                targets = torch.cat([zero_tensor, labels[:, :-1]], dim=1)
+                
+                outputs = self._forward(sequences, targets)
+                
+                labels = labels.float()
                 loss = self.loss_fn(outputs, labels)
                 total_val_loss += loss.item()
                 
-                self.metrics.update(outputs, labels)
+                # We only care about the last time step for metrics
+                self.metrics.update(outputs[:, -1], labels[:, -1])
                 val_pbar.set_postfix(loss=f"{loss.item():.4f}")
         
         avg_val_loss = total_val_loss / len(self.val_loader)
@@ -202,12 +231,19 @@ class Trainer:
             test_pbar = tqdm(self.test_loader, desc="[Test]", leave=True)
             for sequences, labels in test_pbar:
                 sequences, labels = sequences.to(self.device), labels.to(self.device)
-                outputs = self._forward(sequences)
+                
+                # Prepare targets by shifting labels right and adding a start token (zero)
+                zero_tensor = torch.zeros(labels.size(0), 1, dtype=labels.dtype, device=labels.device)
+                targets = torch.cat([zero_tensor, labels[:, :-1]], dim=1)
+                
+                outputs = self._forward(sequences, targets)
 
+                labels = labels.float()
                 loss = self.loss_fn(outputs, labels)
                 total_test_loss += loss.item()
 
-                self.metrics.update(outputs, labels)
+                # We only care about the last time step for metrics
+                self.metrics.update(outputs[:, -1], labels[:, -1])
                 test_pbar.set_postfix(loss=f"{loss.item():.4f}")
         
         avg_test_loss = total_test_loss / len(self.test_loader)

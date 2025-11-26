@@ -1,0 +1,32 @@
+2025-11-26 11:00:56,987 - __main__ - INFO - Loaded configuration from src/backend/config.yaml
+2025-11-26 11:00:56,987 - __main__ - DEBUG - Configuration: {'data': {'path': 'data/Wildfire_Dataset.csv', 'features': ['pr', 'rmax', 'rmin', 'sph', 'srad', 'tmmn', 'tmmx', 'vs', 'bi', 'fm100', 'fm1000', 'erc', 'etr', 'pet', 'vpd'], 'split_ratios': {'train': 0.6, 'val': 0.2, 'test': 0.2}, 'window_size': 10}, 'model': {'name': 'Transformer', 'params': {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}, 'threshold': 0.01}, 'training': {'batch_size': 32, 'epochs': 1, 'max_steps_per_epoch': 1000, 'learning_rate': 0.001, 'loss_function': 'BCE', 'optimizer': 'Adam', 'metrics': ['Precision', 'Recall', 'F1Score']}, 'system': {'log_dir': 'src/backend/logs/', 'checkpoint_path': 'src/backend/checkpoints/best_model.pt', 'verbose': True}}
+2025-11-26 11:00:58,506 - trainer - INFO - Using CUDA device: NVIDIA GeForce RTX 4060 Laptop GPU
+2025-11-26 11:00:58,506 - trainer - INFO - Initializing datasets...
+2025-11-26 11:00:58,507 - dataset - INFO - Found cached preprocessed data, loading from cache...
+2025-11-26 11:00:58,507 - dataset - INFO - Loading preprocessed data from cache (key: 41ce5cb275e9)
+2025-11-26 11:01:10,667 - dataset - INFO - Loaded train split (5690520 rows) from cache
+2025-11-26 11:01:14,707 - dataset - INFO - Loaded val split (1896840 rows) from cache
+2025-11-26 11:01:18,887 - dataset - INFO - Loaded test split (1896840 rows) from cache
+2025-11-26 11:01:20,617 - dataset - INFO - Creating sequences for 36755 groups in split 'train'
+2025-11-26 11:01:53,126 - dataset - DEBUG - Created 5322970 sequences for split train
+2025-11-26 11:01:53,905 - dataset - INFO - Creating sequences for 36755 groups in split 'val'
+2025-11-26 11:02:09,674 - dataset - DEBUG - Created 1529290 sequences for split val
+2025-11-26 11:02:10,386 - dataset - INFO - Creating sequences for 36755 groups in split 'test'
+2025-11-26 11:02:26,549 - dataset - DEBUG - Created 1529290 sequences for split test
+2025-11-26 11:02:26,599 - trainer - DEBUG - Train dataset initialized with 5322970 samples.
+2025-11-26 11:02:26,599 - trainer - DEBUG - Val dataset initialized with 1529290 samples.
+2025-11-26 11:02:26,599 - trainer - DEBUG - Test dataset initialized with 1529290 samples.
+2025-11-26 11:02:26,601 - trainer - INFO - Number of features: 18
+2025-11-26 11:02:26,601 - trainer - INFO - Initializing model...
+2025-11-26 11:02:26,601 - trainer - DEBUG - Model parameters: {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}
+2025-11-26 11:02:28,162 - trainer - INFO - Model Transformer initialized and moved to device: cuda.
+2025-11-26 11:02:29,401 - trainer - INFO - Training components initialized.
+2025-11-26 11:02:29,401 - trainer - INFO - Starting training...
+2025-11-26 11:02:36,359 - trainer - INFO - Epoch 1 - Train Loss: 0.0127, Metrics: {'BinaryPrecision': tensor(0.0214, device='cuda:0'), 'BinaryRecall': tensor(0.8514, device='cuda:0'), 'BinaryF1Score': tensor(0.0418, device='cuda:0')}
+2025-11-26 11:02:38,402 - trainer - INFO - Epoch 1 - Validation Loss: 0.0000, Metrics: {'BinaryPrecision': tensor(0., device='cuda:0'), 'BinaryRecall': tensor(0., device='cuda:0'), 'BinaryF1Score': tensor(0., device='cuda:0')}
+2025-11-26 11:02:38,414 - trainer - INFO - Saved new best model to src/backend/checkpoints/best_model.pt
+2025-11-26 11:02:38,414 - trainer - INFO - Training finished.
+2025-11-26 11:02:38,414 - trainer - INFO - Starting testing...
+2025-11-26 11:04:17,989 - trainer - INFO - Test Loss: 0.0741, Metrics: {'BinaryPrecision': tensor(0.9927, device='cuda:0'), 'BinaryRecall': tensor(0.9374, device='cuda:0'), 'BinaryF1Score': tensor(0.9643, device='cuda:0')}
+2025-11-26 11:04:17,989 - trainer - INFO - Testing finished.
+2025-11-26 11:04:17,989 - __main__ - INFO - Total execution time: 201.01 seconds

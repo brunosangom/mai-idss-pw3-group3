@@ -117,7 +117,7 @@ class WildfireDataset(Dataset):
         dfs = []
         for split in ['train', 'val', 'test']:
             split_df = pd.read_csv(cache_paths[split])
-            split_df['Wildfire'] = split_df['Wildfire'].astype(np.float32)
+            split_df['Wildfire'] = split_df['Wildfire'].astype(np.int32)
             logger.info(f"Loaded {split} split ({len(split_df)} rows) from cache")
             dfs.append(split_df)
         
@@ -166,7 +166,8 @@ class WildfireDataset(Dataset):
         df = pd.read_csv(data_config['path'], usecols=all_cols)
         df = df.dropna(subset=['latitude', 'longitude', 'datetime'])
         df['datetime'] = pd.to_datetime(df['datetime'])
-        df['Wildfire'] = df['Wildfire'].map({'Yes': 1, 'No': 0}).astype(np.float32)
+        df['Wildfire'] = df['Wildfire'].map({'Yes': 1, 'No': 0})
+        df['Wildfire'] = df['Wildfire'].astype(np.int32)
         logger.debug(f"Loaded dataframe with shape {df.shape}")
         
         # Perform common preprocessing once
