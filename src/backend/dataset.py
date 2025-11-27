@@ -44,6 +44,7 @@ class WildfireDataset(Dataset):
             'features': sorted(data_config.get('features', [])),
             'split_ratios': data_config['split_ratios'],
             'window_size': data_config['window_size'],
+            'temporal_bucket': data_config.get('temporal_bucket', 'sequential'),
         }
         
         # Create a hash of the configuration
@@ -75,6 +76,86 @@ class WildfireDataset(Dataset):
         """
         cache_paths = cls._get_cache_paths(config)
         return all(Path(p).exists() for p in cache_paths.values())
+
+    @classmethod
+    def _stratified_temporal_split(cls, df, temporal_bucket, train_ratio, val_ratio, logger):
+        """
+        Perform stratified temporal split to ensure each split (train/val/test) 
+        contains proportional samples from all time periods.
+        
+        This prevents temporal distribution shift where test data contains 
+        disproportionately more recent (higher wildfire rate) data.
+        
+        The strategy assigns entire temporal buckets to splits in a round-robin fashion,
+        ensuring each split gets buckets from different time periods while maintaining
+        temporal continuity within each bucket (required for sequence creation).
+        
+        Args:
+            df: DataFrame with '_group_id' column already created
+            temporal_bucket: 'month', 'quarter', or 'year'
+            train_ratio: Fraction of data for training
+            val_ratio: Fraction of data for validation
+            logger: Logger instance
+            
+        Returns:
+            DataFrame with '_split' column assigned
+        """
+        # Create temporal bucket identifier based on the strategy
+        if temporal_bucket == 'month':
+            df['_temporal_bucket'] = df['datetime'].dt.to_period('M')
+        elif temporal_bucket == 'quarter':
+            df['_temporal_bucket'] = df['datetime'].dt.to_period('Q')
+        elif temporal_bucket == 'year':
+            df['_temporal_bucket'] = df['datetime'].dt.year
+        else:
+            raise ValueError(f"Invalid temporal_bucket: {temporal_bucket}. Must be 'month', 'quarter', 'year', or 'sequential'.")
+        
+        # Get unique buckets sorted by time
+        unique_buckets = sorted(df['_temporal_bucket'].unique())
+        n_buckets = len(unique_buckets)
+        logger.info(f"Stratified split using {n_buckets} temporal buckets ({temporal_bucket})")
+        
+        # Calculate how many buckets go to each split (maintaining order within cycles)
+        # Use a cycle of 10 buckets: 8 train, 1 val, 1 test
+        block_size = 10
+        train_per_block = int(block_size * train_ratio)  # 8
+        val_per_block = int(block_size * val_ratio)      # 1
+        
+        # Create bucket-to-split mapping using round-robin assignment
+        # Within each block of 10 buckets: first 8 -> train, next 1 -> val, last 1 -> test
+        bucket_to_split = {}
+        for i, bucket in enumerate(unique_buckets):
+            pos_in_block = i % block_size
+            if pos_in_block < train_per_block:
+                bucket_to_split[bucket] = 'train'
+            elif pos_in_block < train_per_block + val_per_block:
+                bucket_to_split[bucket] = 'val'
+            else:
+                bucket_to_split[bucket] = 'test'
+        
+        # Assign splits based on bucket membership
+        df['_split'] = df['_temporal_bucket'].map(bucket_to_split)
+        
+        # Log which buckets went to which split
+        train_buckets = [b for b, s in bucket_to_split.items() if s == 'train']
+        val_buckets = [b for b, s in bucket_to_split.items() if s == 'val']
+        test_buckets = [b for b, s in bucket_to_split.items() if s == 'test']
+        logger.info(f"Bucket assignment: {len(train_buckets)} train, {len(val_buckets)} val, {len(test_buckets)} test")
+        
+        # Log split distribution summary
+        split_counts = df.groupby('_split').size()
+        total = len(df)
+        logger.info(f"Stratified split distribution (by {temporal_bucket}):")
+        for split in ['train', 'val', 'test']:
+            count = split_counts.get(split, 0)
+            pct = count / total * 100
+            wildfire_rate = df.loc[df['_split'] == split, 'Wildfire'].mean() * 100
+            logger.info(f"  {split}: {count:,} rows ({pct:.1f}%), wildfire rate: {wildfire_rate:.2f}%")
+        
+        # Clean up temporary columns
+        df.drop(columns=['_temporal_bucket'], inplace=True)
+        
+        return df
 
     @classmethod
     def _save_to_cache(cls, config, df, feature_cols):
@@ -201,20 +282,26 @@ class WildfireDataset(Dataset):
         df['_group_id'] = df.groupby(['latitude', 'longitude']).ngroup()
         df = df.sort_values(['_group_id', 'datetime']).reset_index(drop=True)
         
-        # Add within-group index for split calculation
-        df['_group_idx'] = df.groupby('_group_id').cumcount()
-        group_sizes = df.groupby('_group_id').size()
-        df['_group_size'] = df['_group_id'].map(group_sizes)
+        # Get temporal bucket strategy from config (default: 'sequential' for backward compatibility)
+        temporal_bucket = data_config.get('temporal_bucket', 'sequential')
+        logger.info(f"Using temporal split strategy: {temporal_bucket}")
         
-        # Calculate split boundaries per row
-        df['_train_end'] = (df['_group_size'] * train_ratio).astype(int)
-        df['_val_end'] = (df['_group_size'] * (train_ratio + val_ratio)).astype(int)
-        
-        # Determine which split each row belongs to
-        df['_split'] = 'test'
-        df.loc[df['_group_idx'] < df['_train_end'], '_split'] = 'train'
-        df.loc[(df['_group_idx'] >= df['_train_end']) & 
-                    (df['_group_idx'] < df['_val_end']), '_split'] = 'val'
+        if temporal_bucket == 'sequential':
+            # Original sequential splitting: first 60% train, next 20% val, last 20% test
+            df['_group_idx'] = df.groupby('_group_id').cumcount()
+            group_sizes = df.groupby('_group_id').size()
+            df['_group_size'] = df['_group_id'].map(group_sizes)
+            
+            df['_train_end'] = (df['_group_size'] * train_ratio).astype(int)
+            df['_val_end'] = (df['_group_size'] * (train_ratio + val_ratio)).astype(int)
+            
+            df['_split'] = 'test'
+            df.loc[df['_group_idx'] < df['_train_end'], '_split'] = 'train'
+            df.loc[(df['_group_idx'] >= df['_train_end']) & 
+                        (df['_group_idx'] < df['_val_end']), '_split'] = 'val'
+        else:
+            # Stratified temporal split: sample from each temporal bucket proportionally
+            df = cls._stratified_temporal_split(df, temporal_bucket, train_ratio, val_ratio, logger)
         
         # Compute normalization stats per group using train+val data
         train_val_mask = df['_split'].isin(['train', 'val'])

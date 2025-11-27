@@ -23,6 +23,17 @@ data:
     val: 0.1
     test: 0.1
   window_size: 30
+  # Temporal split strategy: controls how data is divided into train/val/test splits
+  # Options:
+  #   - 'sequential': Original chronological split (first X% -> train, next Y% -> val, rest -> test)
+  #                   WARNING: May cause temporal distribution shift if wildfire rates vary over time
+  #   - 'month': Assigns entire months to splits in round-robin fashion (balanced across time)
+  #   - 'quarter': Assigns entire quarters to splits in round-robin fashion (recommended)
+  #   - 'year': Assigns entire years to splits in round-robin fashion (coarsest granularity)
+  # The stratified options (month/quarter/year) ensure each split contains data from different
+  # time periods, preventing temporal distribution shift while maintaining temporal continuity
+  # within each bucket for proper sequence creation.
+  temporal_bucket: "quarter"
 
 # Model configuration
 model:

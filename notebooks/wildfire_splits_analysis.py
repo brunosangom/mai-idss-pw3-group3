@@ -30,6 +30,7 @@ print("Data Configuration:")
 print(f"  - Data path: {config.get_data_config()['path']}")
 print(f"  - Window size: {config.get_data_config()['window_size']}")
 print(f"  - Split ratios: {config.get_data_config()['split_ratios']}")
+print(f"  - Temporal bucket: {config.get_data_config().get('temporal_bucket', 'sequential')}")
 print(f"  - Features: {config.get_data_config()['features']}")
 
 # %%
