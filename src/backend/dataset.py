@@ -184,9 +184,16 @@ class WildfireDataset(Dataset):
         df['longitude_norm'] = (df['longitude'] - lon_min) / (lon_max - lon_min)
         df['datetime_norm'] = df['datetime'].dt.dayofyear / 365.0
         
+        # Normalize year based on min-max
+        year_min, year_max = df['datetime'].dt.year.min(), df['datetime'].dt.year.max()
+        if year_max > year_min:
+            df['year_norm'] = (df['datetime'].dt.year - year_min) / (year_max - year_min)
+        else:
+            df['year_norm'] = 0.0
+        
         # Identify numeric features for normalization
         exclude_cols = {'latitude', 'longitude', 'datetime', 'Wildfire', 
-                        'datetime_norm', 'latitude_norm', 'longitude_norm'}
+                        'datetime_norm', 'latitude_norm', 'longitude_norm', 'year_norm'}
         numeric_features = [col for col in df.select_dtypes(include=np.number).columns 
                            if col not in exclude_cols]
         
