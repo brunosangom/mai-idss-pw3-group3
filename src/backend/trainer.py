@@ -24,6 +24,10 @@ class Trainer:
         self.system_config = config.get_system_config()
         self.threshold = self.model_config.get('threshold', 0.5)
         self.tune_threshold = self.training_config.get('tune_threshold', False)
+        self.system_config['checkpoint_path'] = os.path.join(
+            self.system_config.get('checkpoint_dir', 'src/backend/checkpoints/'),
+            f"{self.system_config['experiment_id']}.pt"
+        )
 
         self._setup_logging()
         self._setup_seed()

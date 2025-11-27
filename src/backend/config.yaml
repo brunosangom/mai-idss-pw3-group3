@@ -68,5 +68,5 @@ system:
   seed: 42  # Random seed for reproducibility (set to null to disable)
   log_dir: "src/backend/logs/"
   results_dir: "src/backend/results/"
-  checkpoint_path: "src/backend/checkpoints/best_model.pt"
+  checkpoint_dir: "src/backend/checkpoints/"
   verbose: True
