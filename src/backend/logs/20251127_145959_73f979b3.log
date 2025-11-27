@@ -1,0 +1,32 @@
+2025-11-27 14:59:59,623 - __main__ - INFO - Loaded configuration from src/backend/config.yaml
+2025-11-27 14:59:59,623 - __main__ - DEBUG - Configuration: {'data': {'path': 'data/Wildfire_Dataset.csv', 'features': ['pr', 'rmax', 'rmin', 'sph', 'srad', 'tmmn', 'tmmx', 'vs', 'bi', 'fm100', 'fm1000', 'erc', 'etr', 'pet', 'vpd'], 'split_ratios': {'train': 0.8, 'val': 0.1, 'test': 0.1}, 'window_size': 30, 'temporal_bucket': 'quarter'}, 'model': {'name': 'Transformer', 'params': {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}, 'threshold': 0.01}, 'training': {'batch_size': 32, 'epochs': 5, 'max_steps_per_epoch': None, 'learning_rate': 0.001, 'loss_function': 'BCE', 'optimizer': 'Adam', 'tune_threshold': True, 'metrics': ['Precision', 'Recall', 'F1Score', 'TrueWildfires', 'PredictedWildfires']}, 'system': {'seed': 42, 'log_dir': 'src/backend/logs/', 'results_dir': 'src/backend/results/', 'checkpoint_path': 'src/backend/checkpoints/best_model.pt', 'verbose': True, 'experiment_id': '20251127_145959_73f979b3'}}
+2025-11-27 15:00:00,346 - trainer - INFO - Random seed set to 42 for reproducibility
+2025-11-27 15:00:00,352 - trainer - INFO - Using CUDA device: NVIDIA GeForce RTX 4060 Laptop GPU
+2025-11-27 15:00:00,352 - trainer - INFO - Initializing datasets...
+2025-11-27 15:00:00,355 - dataset - INFO - Found cached preprocessed data, loading from cache...
+2025-11-27 15:00:00,355 - dataset - INFO - Loading preprocessed data from cache (key: 6d1bcb3d4045)
+2025-11-27 15:00:19,695 - dataset - INFO - Loaded train split (7849246 rows) from cache
+2025-11-27 15:00:21,308 - dataset - INFO - Loaded val split (788350 rows) from cache
+2025-11-27 15:00:23,066 - dataset - INFO - Loaded test split (847129 rows) from cache
+2025-11-27 15:00:25,450 - dataset - INFO - Creating sequences for 35620 groups in split 'train'
+2025-11-27 15:01:20,924 - dataset - DEBUG - Created 6791288 sequences for split train
+2025-11-27 15:01:24,193 - dataset - INFO - Creating sequences for 16222 groups in split 'val'
+2025-11-27 15:01:29,850 - dataset - DEBUG - Created 383669 sequences for split val
+2025-11-27 15:01:30,528 - dataset - INFO - Creating sequences for 16241 groups in split 'test'
+2025-11-27 15:01:38,229 - dataset - DEBUG - Created 430879 sequences for split test
+2025-11-27 15:01:38,256 - trainer - DEBUG - Train dataset initialized with 6791288 samples.
+2025-11-27 15:01:38,256 - trainer - DEBUG - Val dataset initialized with 383669 samples.
+2025-11-27 15:01:38,256 - trainer - DEBUG - Test dataset initialized with 430879 samples.
+2025-11-27 15:01:38,262 - trainer - INFO - Number of features: 19
+2025-11-27 15:01:38,262 - trainer - INFO - Initializing model...
+2025-11-27 15:01:38,262 - trainer - DEBUG - Model parameters: {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}
+2025-11-27 15:01:38,879 - trainer - INFO - Model Transformer initialized and moved to device: cuda.
+2025-11-27 15:01:40,516 - trainer - INFO - Training components initialized.
+2025-11-27 15:01:40,516 - trainer - INFO - Starting training...
+2025-11-27 15:01:40,516 - trainer - INFO - Threshold used for metrics during training: 0.01
+2025-11-27 15:41:27,691 - trainer - INFO - Epoch 1 - Train Loss: 0.0361, Metrics: {'BinaryPrecision': tensor(0.1356, device='cuda:0'), 'BinaryRecall': tensor(0.9813, device='cuda:0'), 'BinaryF1Score': tensor(0.2383, device='cuda:0'), 'TrueWildfiresMetric': tensor(380590, device='cuda:0'), 'PredictedWildfiresMetric': tensor(2753517, device='cuda:0')}
+2025-11-27 15:42:15,660 - trainer - INFO - Epoch 1 - Validation Loss: 0.0644, Metrics: {'BinaryPrecision': tensor(0.1734, device='cuda:0'), 'BinaryRecall': tensor(0.9671, device='cuda:0'), 'BinaryF1Score': tensor(0.2940, device='cuda:0'), 'TrueWildfiresMetric': tensor(30514, device='cuda:0'), 'PredictedWildfiresMetric': tensor(170217, device='cuda:0')}
+2025-11-27 15:42:15,747 - trainer - INFO - Saved new best model to src/backend/checkpoints/best_model.pt
+2025-11-27 16:16:33,151 - trainer - INFO - Epoch 2 - Train Loss: 0.0704, Metrics: {'BinaryPrecision': tensor(0.1590, device='cuda:0'), 'BinaryRecall': tensor(0.9857, device='cuda:0'), 'BinaryF1Score': tensor(0.2739, device='cuda:0'), 'TrueWildfiresMetric': tensor(380590, device='cuda:0'), 'PredictedWildfiresMetric': tensor(2358688, device='cuda:0')}
+2025-11-27 16:17:27,045 - trainer - INFO - Epoch 2 - Validation Loss: 0.0627, Metrics: {'BinaryPrecision': tensor(0.1715, device='cuda:0'), 'BinaryRecall': tensor(0.9844, device='cuda:0'), 'BinaryF1Score': tensor(0.2921, device='cuda:0'), 'TrueWildfiresMetric': tensor(30514, device='cuda:0'), 'PredictedWildfiresMetric': tensor(175195, device='cuda:0')}
+2025-11-27 16:17:27,087 - trainer - INFO - Saved new best model to src/backend/checkpoints/best_model.pt

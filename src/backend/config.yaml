@@ -49,10 +49,11 @@ model:
 # Training configuration
 training:
   batch_size: 32
-  epochs: 1
-  max_steps_per_epoch: 1000
+  epochs: 2
+  max_steps_per_epoch: null
   learning_rate: 0.001
   loss_function: "BCE"
+  minority_class_weight: 16.5  # Weight for positive class (wildfire=1) to address class imbalance. Negative class has weight 1.0.
   optimizer: "Adam"
   tune_threshold: True  # If True, tunes threshold on validation set based on F1 score after training
   metrics:

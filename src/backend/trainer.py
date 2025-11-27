@@ -113,8 +113,16 @@ class Trainer:
 
     def _init_training_components(self):
         loss_function_str = self.training_config.get('loss_function', 'BCE')
+        self.minority_class_weight = self.training_config.get('minority_class_weight', 1.0)
+        
         if loss_function_str == 'BCE':
-            self.loss_fn = nn.BCELoss()
+            if self.minority_class_weight != 1.0:
+                # Use weighted BCE loss to address class imbalance
+                # We'll compute the loss manually with per-sample weights
+                self.loss_fn = self._weighted_bce_loss
+                self.logger.info(f"Using weighted BCE loss with minority_class_weight={self.minority_class_weight}")
+            else:
+                self.loss_fn = nn.BCELoss()
         else:
             raise ValueError(f"Loss function {loss_function_str} not supported.")
         optimizer_str = self.training_config.get('optimizer', 'Adam')
@@ -126,6 +134,23 @@ class Trainer:
         self.metrics = self._create_metrics()
         self.best_val_loss = float('inf')
         self.logger.info("Training components initialized.")
+
+    def _weighted_bce_loss(self, outputs, labels):
+        """Compute weighted BCE loss to handle class imbalance.
+        
+        Applies minority_class_weight to positive samples (label=1) and weight 1.0 to negative samples.
+        """
+        # Create weight tensor: minority_class_weight for positive samples, 1.0 for negative samples
+        weights = torch.where(labels == 1, 
+                              torch.tensor(self.minority_class_weight, device=labels.device),
+                              torch.tensor(1.0, device=labels.device))
+        
+        # Compute BCE loss per element
+        bce = nn.functional.binary_cross_entropy(outputs, labels, reduction='none')
+        
+        # Apply weights and compute mean
+        weighted_bce = bce * weights
+        return weighted_bce.mean()
 
     def _create_metrics(self):
         metric_names = self.training_config.get('metrics', [])
