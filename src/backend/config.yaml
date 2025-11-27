@@ -19,35 +19,54 @@ data:
     - "pet"
     - "vpd"
   split_ratios:
-    train: 0.6
-    val: 0.2
-    test: 0.2
+    train: 0.8
+    val: 0.1
+    test: 0.1
+  window_size: 30
+  # Temporal split strategy: controls how data is divided into train/val/test splits
+  # Options:
+  #   - 'sequential': Original chronological split (first X% -> train, next Y% -> val, rest -> test)
+  #                   WARNING: May cause temporal distribution shift if wildfire rates vary over time
+  #   - 'month': Assigns entire months to splits in round-robin fashion (balanced across time)
+  #   - 'quarter': Assigns entire quarters to splits in round-robin fashion (recommended)
+  #   - 'year': Assigns entire years to splits in round-robin fashion (coarsest granularity)
+  # The stratified options (month/quarter/year) ensure each split contains data from different
+  # time periods, preventing temporal distribution shift while maintaining temporal continuity
+  # within each bucket for proper sequence creation.
+  temporal_bucket: "quarter"
 
 # Model configuration
 model:
   name: "Transformer"
   params:
-    d_model: 512
-    nhead: 8
-    num_encoder_layers: 6
-    num_decoder_layers: 6
-    dim_feedforward: 2048
+    d_model: 32
+    nhead: 4
+    num_layers: 2
+    dim_feedforward: 512
     dropout: 0.1
+  threshold: 0.01
 
 # Training configuration
 training:
-  window_size: 10
   batch_size: 32
-  epochs: 100
+  epochs: 2
+  max_steps_per_epoch: null
   learning_rate: 0.001
   loss_function: "BCE"
+  minority_class_weight: 16.5  # Weight for positive class (wildfire=1) to address class imbalance. Negative class has weight 1.0.
   optimizer: "Adam"
+  tune_threshold: True  # If True, tunes threshold on validation set based on F1 score after training
   metrics:
     - "Precision"
     - "Recall"
     - "F1Score"
+    - TrueWildfires
+    - PredictedWildfires
 
 # System configuration
 system:
-  log_file: "logs/experiment.log"
-  checkpoint_path: "checkpoints/best_model.pt"
+  seed: 42  # Random seed for reproducibility (set to null to disable)
+  log_dir: "src/backend/logs/"
+  results_dir: "src/backend/results/"
+  checkpoint_dir: "src/backend/checkpoints/"
+  verbose: True

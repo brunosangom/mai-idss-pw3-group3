@@ -1,0 +1,25 @@
+2025-11-25 15:12:24,757 - __main__ - INFO - Loaded configuration from src/backend/config.yaml
+2025-11-25 15:12:24,757 - __main__ - DEBUG - Configuration: {'data': {'path': 'data/Wildfire_Dataset.csv', 'features': ['pr', 'rmax', 'rmin', 'sph', 'srad', 'tmmn', 'tmmx', 'vs', 'bi', 'fm100', 'fm1000', 'erc', 'etr', 'pet', 'vpd'], 'split_ratios': {'train': 0.6, 'val': 0.2, 'test': 0.2}, 'window_size': 10}, 'model': {'name': 'Transformer', 'params': {'d_model': 32, 'nhead': 4, 'num_encoder_layers': 2, 'num_decoder_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}}, 'training': {'batch_size': 32, 'epochs': 1, 'max_steps_per_epoch': 1000, 'learning_rate': 0.001, 'loss_function': 'BCE', 'optimizer': 'Adam', 'metrics': ['Precision', 'Recall', 'F1Score']}, 'system': {'log_dir': 'src/backend/logs/', 'checkpoint_path': 'src/backend/checkpoints/best_model.pt', 'verbose': True}}
+2025-11-25 15:12:26,282 - trainer - INFO - Using CUDA device: NVIDIA GeForce RTX 4060 Laptop GPU
+2025-11-25 15:12:26,282 - trainer - INFO - Initializing datasets...
+2025-11-25 15:12:26,282 - dataset - INFO - Found cached preprocessed data, loading from cache...
+2025-11-25 15:12:26,282 - dataset - INFO - Loading preprocessed data from cache (key: 41ce5cb275e9)
+2025-11-25 15:12:39,654 - dataset - INFO - Loaded train split (5690520 rows) from cache
+2025-11-25 15:12:44,300 - dataset - INFO - Loaded val split (1896840 rows) from cache
+2025-11-25 15:12:48,755 - dataset - INFO - Loaded test split (1896840 rows) from cache
+2025-11-25 15:12:50,558 - dataset - INFO - Creating sequences for 36755 groups in split 'train'
+2025-11-25 15:13:25,089 - dataset - DEBUG - Created 5322970 sequences for split train
+2025-11-25 15:13:25,849 - dataset - INFO - Creating sequences for 36755 groups in split 'val'
+2025-11-25 15:13:41,907 - dataset - DEBUG - Created 1529290 sequences for split val
+2025-11-25 15:13:42,603 - dataset - INFO - Creating sequences for 36755 groups in split 'test'
+2025-11-25 15:13:59,561 - dataset - DEBUG - Created 1529290 sequences for split test
+2025-11-25 15:13:59,610 - trainer - DEBUG - Train dataset initialized with 5322970 samples.
+2025-11-25 15:13:59,610 - trainer - DEBUG - Val dataset initialized with 1529290 samples.
+2025-11-25 15:13:59,610 - trainer - DEBUG - Test dataset initialized with 1529290 samples.
+2025-11-25 15:13:59,611 - trainer - INFO - Number of features: 18
+2025-11-25 15:13:59,611 - trainer - INFO - Initializing model...
+2025-11-25 15:13:59,611 - trainer - DEBUG - Model parameters: {'d_model': 32, 'nhead': 4, 'num_encoder_layers': 2, 'num_decoder_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}
+2025-11-25 15:14:01,179 - trainer - INFO - Model Transformer initialized and moved to device: cuda.
+2025-11-25 15:14:02,424 - trainer - INFO - Training components initialized.
+2025-11-25 15:14:02,424 - trainer - INFO - Starting training...
+2025-11-25 15:14:17,380 - trainer - INFO - Epoch 1 - Train Loss: 0.0016, Metrics: {'BinaryPrecision': tensor(0., device='cuda:0'), 'BinaryRecall': tensor(0., device='cuda:0'), 'BinaryF1Score': tensor(0., device='cuda:0')}
