@@ -1,0 +1,14 @@
+{
+  "name": "mai-idss-pw3-group3",
+  "version": "1.0.0",
+  "description": "Intelligent Decision Support System for Wildfire Prediction",
+  "scripts": {
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd src/backend && flask --app app run --debug",
+    "start:frontend": "cd src/frontend && npm start",
+    "install:all": "cd src/frontend && npm install && cd ../../src/backend && pip install -r requirements.txt"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
