@@ -1,0 +1,49 @@
+2025-11-29 13:29:12,181 - __main__ - INFO - Loaded configuration from src/backend/config.yaml
+2025-11-29 13:29:12,182 - __main__ - DEBUG - Configuration: {'data': {'path': 'data/Wildfire_Dataset.csv', 'features': ['pr', 'rmax', 'rmin', 'sph', 'srad', 'tmmn', 'tmmx', 'vs', 'bi', 'fm100', 'fm1000', 'erc', 'etr', 'pet', 'vpd'], 'split_ratios': {'train': 0.8, 'val': 0.1, 'test': 0.1}, 'window_size': 30, 'temporal_bucket': 'quarter'}, 'model': {'name': 'Transformer', 'params': {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}, 'threshold': 0.5}, 'training': {'batch_size': 32, 'epochs': 5, 'max_steps_per_epoch': None, 'learning_rate': 0.001, 'loss_function': 'BCE', 'minority_class_weight': 16.5, 'optimizer': 'Adam', 'tune_threshold': True, 'metrics': ['Precision', 'Recall', 'F1Score', 'TrueWildfires', 'PredictedWildfires']}, 'system': {'seed': 42, 'log_dir': 'src/backend/logs/', 'results_dir': 'src/backend/results/', 'checkpoint_dir': 'src/backend/checkpoints/', 'verbose': True, 'experiment_id': '20251129_132912_1274ed63'}}
+2025-11-29 13:29:12,219 - trainer - INFO - Random seed set to 42 for reproducibility
+2025-11-29 13:29:12,223 - trainer - INFO - Using CUDA device: NVIDIA GeForce RTX 4060 Laptop GPU
+2025-11-29 13:29:12,223 - trainer - INFO - Initializing datasets...
+2025-11-29 13:29:12,225 - dataset - INFO - Found cached preprocessed data, loading from cache...
+2025-11-29 13:29:12,225 - dataset - INFO - Loading preprocessed data from cache (key: 6d1bcb3d4045)
+2025-11-29 13:29:29,172 - dataset - INFO - Loaded train split (7849246 rows) from cache
+2025-11-29 13:29:30,829 - dataset - INFO - Loaded val split (788350 rows) from cache
+2025-11-29 13:29:32,608 - dataset - INFO - Loaded test split (847129 rows) from cache
+2025-11-29 13:29:34,991 - dataset - INFO - Creating sequences for 35620 groups in split 'train'
+2025-11-29 13:30:31,192 - dataset - DEBUG - Created 6791288 sequences for split train
+2025-11-29 13:30:32,677 - dataset - INFO - Creating sequences for 16222 groups in split 'val'
+2025-11-29 13:30:38,392 - dataset - DEBUG - Created 383669 sequences for split val
+2025-11-29 13:30:39,027 - dataset - INFO - Creating sequences for 16241 groups in split 'test'
+2025-11-29 13:30:46,805 - dataset - DEBUG - Created 430879 sequences for split test
+2025-11-29 13:30:46,828 - trainer - DEBUG - Train dataset initialized with 6791288 samples.
+2025-11-29 13:30:46,828 - trainer - DEBUG - Val dataset initialized with 383669 samples.
+2025-11-29 13:30:46,828 - trainer - DEBUG - Test dataset initialized with 430879 samples.
+2025-11-29 13:30:46,832 - trainer - INFO - Number of features: 19
+2025-11-29 13:30:46,832 - trainer - INFO - Initializing model...
+2025-11-29 13:30:46,832 - trainer - DEBUG - Model parameters: {'d_model': 32, 'nhead': 4, 'num_layers': 2, 'dim_feedforward': 512, 'dropout': 0.1}
+2025-11-29 13:30:46,975 - trainer - INFO - Model Transformer initialized and moved to device: cuda.
+2025-11-29 13:30:46,975 - trainer - INFO - Using weighted BCE loss with minority_class_weight=16.5
+2025-11-29 13:30:54,634 - trainer - INFO - Training components initialized.
+2025-11-29 13:30:54,634 - trainer - INFO - Starting training...
+2025-11-29 13:30:54,634 - trainer - INFO - Threshold used for metrics during training: 0.5
+2025-11-29 14:01:40,136 - trainer - INFO - Epoch 1 - Train Loss: 0.1469, Metrics: {'BinaryPrecision': tensor(0.1949, device='cuda:0'), 'BinaryRecall': tensor(0.8959, device='cuda:0'), 'BinaryF1Score': tensor(0.3202, device='cuda:0'), 'TrueWildfiresMetric': tensor(380590, device='cuda:0'), 'PredictedWildfiresMetric': tensor(1749292, device='cuda:0')}
+2025-11-29 14:02:17,198 - trainer - INFO - Epoch 1 - Validation Loss: 0.3290, Metrics: {'BinaryPrecision': tensor(0.2069, device='cuda:0'), 'BinaryRecall': tensor(0.9076, device='cuda:0'), 'BinaryF1Score': tensor(0.3370, device='cuda:0'), 'TrueWildfiresMetric': tensor(30514, device='cuda:0'), 'PredictedWildfiresMetric': tensor(133830, device='cuda:0')}
+2025-11-29 14:02:17,446 - trainer - INFO - Saved new best model to src/backend/checkpoints/20251129_132912_1274ed63.pt
+2025-11-29 14:27:00,175 - trainer - INFO - Epoch 2 - Train Loss: 0.3594, Metrics: {'BinaryPrecision': tensor(0.2224, device='cuda:0'), 'BinaryRecall': tensor(0.9178, device='cuda:0'), 'BinaryF1Score': tensor(0.3581, device='cuda:0'), 'TrueWildfiresMetric': tensor(380590, device='cuda:0'), 'PredictedWildfiresMetric': tensor(1570512, device='cuda:0')}
+2025-11-29 14:27:29,946 - trainer - INFO - Epoch 2 - Validation Loss: 0.3196, Metrics: {'BinaryPrecision': tensor(0.2135, device='cuda:0'), 'BinaryRecall': tensor(0.9386, device='cuda:0'), 'BinaryF1Score': tensor(0.3479, device='cuda:0'), 'TrueWildfiresMetric': tensor(30514, device='cuda:0'), 'PredictedWildfiresMetric': tensor(134137, device='cuda:0')}
+2025-11-29 14:27:29,952 - trainer - INFO - Saved new best model to src/backend/checkpoints/20251129_132912_1274ed63.pt
+2025-11-29 14:52:03,760 - trainer - INFO - Epoch 3 - Train Loss: 0.1302, Metrics: {'BinaryPrecision': tensor(0.2328, device='cuda:0'), 'BinaryRecall': tensor(0.9219, device='cuda:0'), 'BinaryF1Score': tensor(0.3717, device='cuda:0'), 'TrueWildfiresMetric': tensor(380590, device='cuda:0'), 'PredictedWildfiresMetric': tensor(1507399, device='cuda:0')}
+2025-11-29 14:52:33,526 - trainer - INFO - Epoch 3 - Validation Loss: 0.3040, Metrics: {'BinaryPrecision': tensor(0.2065, device='cuda:0'), 'BinaryRecall': tensor(0.9393, device='cuda:0'), 'BinaryF1Score': tensor(0.3385, device='cuda:0'), 'TrueWildfiresMetric': tensor(30514, device='cuda:0'), 'PredictedWildfiresMetric': tensor(138824, device='cuda:0')}
+2025-11-29 14:52:33,533 - trainer - INFO - Saved new best model to src/backend/checkpoints/20251129_132912_1274ed63.pt
+2025-11-29 15:17:15,414 - trainer - INFO - Epoch 4 - Train Loss: 0.6322, Metrics: {'BinaryPrecision': tensor(0.2379, device='cuda:0'), 'BinaryRecall': tensor(0.9242, device='cuda:0'), 'BinaryF1Score': tensor(0.3784, device='cuda:0'), 'TrueWildfiresMetric': tensor(380590, device='cuda:0'), 'PredictedWildfiresMetric': tensor(1478515, device='cuda:0')}
+2025-11-29 15:17:46,360 - trainer - INFO - Epoch 4 - Validation Loss: 0.3275, Metrics: {'BinaryPrecision': tensor(0.2362, device='cuda:0'), 'BinaryRecall': tensor(0.8942, device='cuda:0'), 'BinaryF1Score': tensor(0.3737, device='cuda:0'), 'TrueWildfiresMetric': tensor(30514, device='cuda:0'), 'PredictedWildfiresMetric': tensor(115533, device='cuda:0')}
+2025-11-29 17:33:40,847 - trainer - INFO - Epoch 5 - Train Loss: 0.2035, Metrics: {'BinaryPrecision': tensor(0.2411, device='cuda:0'), 'BinaryRecall': tensor(0.9255, device='cuda:0'), 'BinaryF1Score': tensor(0.3825, device='cuda:0'), 'TrueWildfiresMetric': tensor(380590, device='cuda:0'), 'PredictedWildfiresMetric': tensor(1461123, device='cuda:0')}
+2025-11-29 17:34:24,351 - trainer - INFO - Epoch 5 - Validation Loss: 0.3066, Metrics: {'BinaryPrecision': tensor(0.2281, device='cuda:0'), 'BinaryRecall': tensor(0.9184, device='cuda:0'), 'BinaryF1Score': tensor(0.3654, device='cuda:0'), 'TrueWildfiresMetric': tensor(30514, device='cuda:0'), 'PredictedWildfiresMetric': tensor(122860, device='cuda:0')}
+2025-11-29 17:34:24,351 - trainer - INFO - Training finished.
+2025-11-29 17:34:24,353 - trainer - INFO - Tuning threshold based on F1 score...
+2025-11-29 17:34:37,787 - trainer - INFO - Optimal threshold: 0.8500 (F1: 0.4383)
+2025-11-29 17:34:37,811 - trainer - INFO - Threshold updated to 0.8500
+2025-11-29 17:34:37,811 - trainer - INFO - Starting testing...
+2025-11-29 17:35:20,463 - trainer - INFO - Test Loss: 0.4356, Metrics: {'BinaryPrecision': tensor(0.3257, device='cuda:0'), 'BinaryRecall': tensor(0.3327, device='cuda:0'), 'BinaryF1Score': tensor(0.3292, device='cuda:0'), 'TrueWildfiresMetric': tensor(31564, device='cuda:0'), 'PredictedWildfiresMetric': tensor(31564, device='cuda:0')}
+2025-11-29 17:35:24,099 - trainer - INFO - Test results saved to src/backend/results/20251129_132912_1274ed63.csv
+2025-11-29 17:35:24,101 - trainer - INFO - Testing finished.
+2025-11-29 17:35:24,120 - __main__ - INFO - Total execution time: 14771.94 seconds
