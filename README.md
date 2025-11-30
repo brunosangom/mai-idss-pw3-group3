@@ -74,7 +74,36 @@ Notes:
 ## Next steps
 
 - Once the dataset is placed in `data/Wildfire_Dataset.csv`, upcoming scripts and notebooks in `src/` will load it from there for preprocessing, EDA, and modeling as per the proposal.
-- We’ll add run instructions, environment setup, and evaluation details as components land in this repository.
+
+## Running the Application
+
+### Quick Start (Development Mode with Hot Reloading)
+
+Start both backend and frontend simultaneously:
+
+```cmd
+start-dev.bat
+```
+
+This will start:
+- **Backend (Flask)** at http://localhost:5000
+- **Frontend (React)** at http://localhost:3000
+
+Changes to code will automatically reload without restarting the servers.
+
+### Manual Start (Individual Services)
+
+**Backend only:**
+```bash
+cd src/backend
+flask --app app run --debug
+```
+
+**Frontend only:**
+```bash
+cd src/frontend
+npm start
+```
 
 ## Referencing the proposal
 
