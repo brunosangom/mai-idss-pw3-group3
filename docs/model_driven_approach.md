@@ -25,4 +25,17 @@
   * Initial Spread Index (ISI): rate of fire spread
   * Build Up Index (BUI): amount of fuel available for combustion
 
+# Implementation
+* Calculation done using xclim
+* Data from open-meteo
+  * Usage Limit: ⚠️ 600 calls / min	, 5000 calls/hour, 10.00 calls/day
+
+  ## Usage Example
+  * Get the prediction for the next 7 days for coordinate 39.7392/-104.9903
+  ```python
+    calculator = FWICalcalculator()
+    vals = calculator.get_fwi(39.7392, -104.9903, days=7) 
+```
+
+# Appendix
 [1] NOTE: NOT PEER REVIEWD- find better source for report :) Janine A. Baijnath-Rodino, Efi Foufoula-Georgiou, Tirtha Banerjee. Reviewing the “Hottest” Fire Indices Worldwide. ESS Open Archive . July 31, 2020. 

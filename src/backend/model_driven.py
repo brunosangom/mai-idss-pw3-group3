@@ -6,10 +6,19 @@ from typing import List, Dict
 
 import xclim
 
+from src.backend.data_fetcher import WeatherFetcher, OpenMeteoFetcher, WeatherGovFetcher
+
+
 class FWICalcalculator:
-    def __init__(self):
+    """Calculate the Fire Weather Index (FWI) using Open-Meteo data and xclim."""
+    def __init__(self, fetcher: WeatherFetcher = None):
         # precipitation threshold for FWI calculations
         self.prec_thresh = "1.5 mm/d"
+        if fetcher is None:
+            self.fetcher = WeatherGovFetcher()
+        else:
+            self.fetcher = fetcher
+
 
     def get_fwi(self, lat: float,
                 lon: float,
@@ -20,15 +29,14 @@ class FWICalcalculator:
                 dc_start: float = 15,
                 dmc_start: float = 6,
                 ffmc_start: float = 85,
-                use_season_mask = True) -> List[Dict]:
+                use_season_mask = False) -> List[Dict]:
         """
         Calculate daily FWI values for a given location using Open-Meteo data and xclim.
         """
         if days < 2:
             days = 2
 
-        hourly = self._fetch_hourly_data(lat, lon, past_days, days)
-        noon_samples = self._preprocess_weather_data(hourly, days)
+        noon_samples = self.fetcher.fetch_data(lat, lon, past_days, days)
 
         # --- Build xarray Dataset with explicit UNITS (FIX) ---
         # ensure numeric dtypes (avoids object dtype sneaking in)
@@ -64,7 +72,7 @@ class FWICalcalculator:
             hurs=ds.hurs,
             sfcWind=ds.sfcWind,
             lat=ds.lat,
-            overwintering=overwintering,
+            overwintering=use_season_mask,
             dc_start=dc_start,
             dmc_start=dmc_start,
             ffmc_start=ffmc_start,
@@ -121,65 +129,7 @@ class FWICalcalculator:
         else:
             return "Extreme"
 
-    @staticmethod
-    def _nearest_noon(group: pd.DataFrame) -> pd.Series:
-        """
-        Take data point approximately at noon (12:00) – robust for pandas 2.3.3 (no .abs() on TimedeltaIndex).
-        """
-        tz = group.index.tz
-        noon = pd.Timestamp(group.index[0].date()).tz_localize(tz) + pd.Timedelta(hours=12)
-        diffs_abs = np.abs((group.index - noon).asi8)
-        i = int(diffs_abs.argmin())
-        return group.iloc[i]
 
-    @staticmethod
-    def _fetch_hourly_data(lat, lon, past_days, days):
-        url = (
-            "https://api.open-meteo.com/v1/forecast"
-            f"?latitude={lat:.5f}&longitude={lon:.5f}"
-            "&hourly=temperature_2m,relative_humidity_2m,windspeed_10m,precipitation"
-            "&timezone=auto"
-            f"&past_days={past_days}"
-            f"&forecast_days={max(days, 7)}"
-        )
-        resp = requests.get(url, timeout=30)
-        resp.raise_for_status()
-        js = resp.json()
-        hourly = js.get("hourly", {})
-        return hourly
-
-    def _preprocess_weather_data(self, hourly, days):
-        if not hourly or "time" not in hourly:
-            raise RuntimeError("Could not load hourly fields.")
-
-        df = pd.DataFrame({
-            "time": pd.to_datetime(hourly["time"]),
-            "tas": hourly["temperature_2m"],   # °C
-            "hurs": hourly["relative_humidity_2m"],  # %
-            "sfcWind": hourly["windspeed_10m"],      # km/h
-            "precip": hourly["precipitation"],       # mm
-        }).set_index("time").sort_index()
-
-        # Find noon sample per day
-        noon_samples = df.groupby(df.index.date).apply(self._nearest_noon)
-        noon_samples.index = pd.to_datetime(noon_samples.index.astype(str))
-
-        # 24h precipitation up to noon: (t-24h, t]
-        pr_24h = []
-        for tnoon in noon_samples.index:
-            window_start = tnoon - pd.Timedelta(hours=24)
-            pr_sum = df.loc[window_start:tnoon, "precip"].sum(min_count=1)
-            pr_24h.append(float(0.0 if pd.isna(pr_sum) else pr_sum))
-        noon_samples["pr"] = pr_24h
-
-        # Drop the first day for clean 24h windows
-        if len(noon_samples) >= 2:
-            noon_samples = noon_samples.iloc[1:]
-
-        noon_samples = noon_samples.iloc[:days]
-        if noon_samples.empty:
-            raise RuntimeError("Too few data points to calculate FWI.")
-        return noon_samples
 
 
 # --- Example call ---
