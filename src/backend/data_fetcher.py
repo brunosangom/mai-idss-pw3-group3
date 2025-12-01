@@ -89,30 +89,19 @@ import requests
 
 class WeatherGovFetcher(WeatherFetcher):
     """
-    WeatherFetcher-Implementierung für https://api.weather.gov
-
-    Öffentliche API:
-        fetch_data(lat, lon, past_days, days) -> DataFrame
-
+    WeatherFetcher for  https://api.weather.gov
     Rückgabe-DataFrame:
         index: datetime (tz-aware, UTC)
         columns:
-            tas      (°C)     -- Lufttemperatur (ca. 2 m)
-            hurs     (%)      -- relative Luftfeuchte
-            sfcWind  (km/h)   -- Windgeschwindigkeit (ca. 10 m)
-            precip   (mm/h)   -- Niederschlagsrate
-            pr       (mm)     -- 24h-Niederschlag bis zum jeweiligen Mittag
-
-    Semantik:
-        - `past_days` wird nur genutzt, um genügend Historie für die 24h-Niederschlagssummen
-          zu holen (Observations der letzten Tage).
-        - Die Anzahl der zurückgegebenen Tages-Samples entspricht **`days`**, analog zu deinem
-          OpenMeteoFetcher: dort wird `_preprocess_weather_data(hourly, days)` gerufen.
+            tas      (°C)     -- temperature (ca. 2 m)
+            hurs     (%)      -- humidity
+            sfcWind  (km/h)   -- wind speed (ca. 10 m)
+            precip   (mm/h)   -- precip
+            pr       (mm)     -- 24h-precip until noon
     """
 
     BASE_URL = "https://api.weather.gov"
 
-    # ISO-8601 Duration wie "PT1H", "PT2H", "P1DT6H" → Timedelta
     _DUR_RE = re.compile(
         r"^P"
         r"(?:(?P<days>\d+)D)?"
@@ -125,23 +114,13 @@ class WeatherGovFetcher(WeatherFetcher):
 
     def __init__(self, user_agent: str = "IDSS-Wildfire/1.0 (example@example.com)"):
         self.user_agent = user_agent
-
-    # -------------------------------------------------------------------------
-    # Öffentliche API
-    # -------------------------------------------------------------------------
-
     def fetch_data(self, lat: float, lon: float, past_days: int, days: int) -> pd.DataFrame:
         """
-        Holt Observations (letzte past_days Tage) + Forecast (nächste days Tage)
-        und bereitet sie in das gewohnte Tagesformat auf.
+        Fetch weather data in format for xclim
         """
         hourly = self._fetch_hourly_data(lat, lon, past_days, days)
         noon_samples = self._preprocess_weather_data(hourly, days)
         return noon_samples
-
-    # -------------------------------------------------------------------------
-    # HTTP-Helfer
-    # -------------------------------------------------------------------------
 
     def _headers(self) -> Dict[str, str]:
         return {
@@ -151,9 +130,9 @@ class WeatherGovFetcher(WeatherFetcher):
 
     def _fetch_point_and_grid_properties(self, lat: float, lon: float):
         """
-        Holt:
+        fetch:
             - /points/{lat},{lon}
-            - forecastGridData-Properties für diesen Gridpoint
+            - forecastGridData-Properties for this gridpoint
         """
         point_url = f"{self.BASE_URL}/points/{lat:.4f},{lon:.4f}"
         r = requests.get(point_url, headers=self._headers(), timeout=30)
@@ -170,9 +149,6 @@ class WeatherGovFetcher(WeatherFetcher):
         return point_props, grid_props
 
     def _get_nearest_station_id(self, point_props: Dict) -> Optional[str]:
-        """
-        Nimmt die erste Station aus `observationStations` (nächste Station).
-        """
         stations_url = point_props.get("observationStations")
         if not stations_url:
             return None
@@ -189,10 +165,6 @@ class WeatherGovFetcher(WeatherFetcher):
             return None
         return station_url.rstrip("/").split("/")[-1]  # z.B. ".../stations/KLAX" → "KLAX"
 
-    # -------------------------------------------------------------------------
-    # Observations (Vergangenheit, letzte ~7 Tage)
-    # -------------------------------------------------------------------------
-
     @staticmethod
     def _convert_temp(value: Optional[float], unit_code: Optional[str]) -> float:
         if value is None or np.isnan(value):
@@ -207,7 +179,7 @@ class WeatherGovFetcher(WeatherFetcher):
     @staticmethod
     def _convert_wind(value: Optional[float], unit_code: Optional[str]) -> float:
         """
-        Konvertiert in km/h.
+        convert units to km/h.
         """
         if value is None or np.isnan(value):
             return np.nan
@@ -245,9 +217,6 @@ class WeatherGovFetcher(WeatherFetcher):
         start: pd.Timestamp,
         end: pd.Timestamp,
     ) -> pd.DataFrame:
-        """
-        Holt Stations-Observations (stündlich oder quasi-stündlich) im Zeitraum [start, end].
-        """
         url = f"{self.BASE_URL}/stations/{station_id}/observations"
         params = {
             "start": start.isoformat().replace("+00:00", "Z"),
@@ -330,15 +299,10 @@ class WeatherGovFetcher(WeatherFetcher):
 
         return df
 
-    # -------------------------------------------------------------------------
-    # Gridpoint-Forecast (Zukunft, forecastGridData)
-    # -------------------------------------------------------------------------
 
     @classmethod
     def _parse_duration(cls, dur: str) -> pd.Timedelta:
-        """
-        Subset von ISO-8601-Dauern wie 'PT1H', 'PT2H', 'P1DT6H' in Timedelta umwandeln.
-        """
+
         m = cls._DUR_RE.match(dur)
         if not m:
             return pd.Timedelta(hours=1)
@@ -352,12 +316,6 @@ class WeatherGovFetcher(WeatherFetcher):
         return pd.Timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
 
     def _expand_grid_series(self, field: Dict, kind: str) -> pd.Series:
-        """
-        Eine Gridpoint-Variable (temperature, relativeHumidity, windSpeed,
-        quantitativePrecipitation / qpf) auf ein stündliches pandas.Series ausrollen.
-
-        kind ∈ {'temp', 'rh', 'wind', 'precip'}
-        """
         if not field:
             raise RuntimeError(f"Required field missing for kind='{kind}'")
 
@@ -402,13 +360,6 @@ class WeatherGovFetcher(WeatherFetcher):
 
     @staticmethod
     def _convert_series_units(ser: pd.Series, uom: str, kind: str) -> pd.Series:
-        """
-        ser + unitCode/uom → Ziel-Einheiten:
-            temp   → °C
-            wind   → km/h
-            precip → mm
-            rh     → % (keine Umrechnung)
-        """
         if ser.empty:
             return ser
 
@@ -439,9 +390,7 @@ class WeatherGovFetcher(WeatherFetcher):
         return ser
 
     def _build_hourly_forecast(self, grid_props: Dict) -> pd.DataFrame:
-        """
-        Baut ein stündliches DataFrame aus dem Gridpoint-Forecast.
-        """
+
         temp_field = grid_props.get("temperature")
         rh_field = grid_props.get("relativeHumidity")
         wind_field = grid_props.get("windSpeed")
@@ -467,7 +416,6 @@ class WeatherGovFetcher(WeatherFetcher):
 
         df = df.sort_index()
 
-        # Glätten / auffüllen
         for col in ["tas", "hurs", "sfcWind"]:
             df[col] = df[col].interpolate(method="time").ffill().bfill()
 
@@ -475,17 +423,7 @@ class WeatherGovFetcher(WeatherFetcher):
 
         return df
 
-    # -------------------------------------------------------------------------
-    # Kombinierte stündliche Daten (Observations + Forecast)
-    # -------------------------------------------------------------------------
-
     def _fetch_hourly_data(self, lat: float, lon: float, past_days: int, days: int) -> pd.DataFrame:
-        """
-        Holt stündliche Daten:
-            - Vergangenheit (Observations, station-based)
-            - Zukunft (Forecast, grid-based)
-        liefert ein kontinuierliches DataFrame ["tas", "hurs", "sfcWind", "precip"].
-        """
         now = pd.Timestamp.utcnow().floor("h")
 
         point_props, grid_props = self._fetch_point_and_grid_properties(lat, lon)
@@ -519,15 +457,12 @@ class WeatherGovFetcher(WeatherFetcher):
 
         hourly = pd.concat(frames).sort_index()
 
-        # Bei doppelten Zeitstempeln das "letzte" behalten (Observations bevorzugen):
         hourly = hourly[~hourly.index.duplicated(keep="last")]
 
-        # Sicherstellen, dass alle Spalten vorhanden sind
         for col in ["tas", "hurs", "sfcWind", "precip"]:
             if col not in hourly:
                 hourly[col] = 0.0 if col == "precip" else np.nan
 
-        # Ggf. noch einmal glätten/auffüllen
         hourly = hourly.sort_index()
         for col in ["tas", "hurs", "sfcWind"]:
             hourly[col] = hourly[col].interpolate(method="time").ffill().bfill()
@@ -535,16 +470,8 @@ class WeatherGovFetcher(WeatherFetcher):
 
         return hourly
 
-    # -------------------------------------------------------------------------
-    # Aggregation auf Mittags-Samples + 24h-Niederschlag
-    # (analog zu deinem OpenMeteoFetcher._preprocess_weather_data)
-    # -------------------------------------------------------------------------
-
     @staticmethod
     def _nearest_noon(group: pd.DataFrame) -> pd.Series:
-        """
-        Wählt den Datenpunkt in einem Tag, der am nächsten an 12:00 (UTC) liegt.
-        """
         tz = group.index.tz
         noon = pd.Timestamp(group.index[0].date()).tz_localize(tz) + pd.Timedelta(hours=12)
         diffs_abs = np.abs((group.index - noon).asi8)
@@ -552,31 +479,22 @@ class WeatherGovFetcher(WeatherFetcher):
         return group.iloc[i]
 
     def _preprocess_weather_data(self, hourly: pd.DataFrame, days: int) -> pd.DataFrame:
-        """
-        Stündliche Daten → tägliche Mittags-Samples + 24h-Niederschlagssumme.
-
-        Gibt genau `days` Tage zurück (oder weniger, wenn nicht genug Daten da sind),
-        wobei der erste Tag wegen des 24h-Fensters gedroppt wird.
-        """
         if hourly is None or hourly.empty:
             raise RuntimeError("Could not load hourly fields from weather.gov.")
 
         df = hourly.sort_index()
 
         if df.index.tz is None:
-            # Sicherheitshalber: wir wollen hier eigentlich immer UTC mit TZ haben
             df.index = df.index.tz_localize("UTC")
 
         tz = df.index.tz
 
-        # 1) Für jeden Tag einen Zeitstempel finden, der am nächsten an 12:00 (UTC) liegt
         unique_dates = sorted({ts.date() for ts in df.index})
         noon_times = []
         noon_rows = []
 
         for d in unique_dates:
             target_noon = pd.Timestamp(d).tz_localize(tz) + pd.Timedelta(hours=12)
-            # Nächste vorhandene Stunde zur Zielzeit
             pos = df.index.get_indexer([target_noon], method="nearest")
             idx = pos[0]
             if idx == -1:
@@ -590,7 +508,6 @@ class WeatherGovFetcher(WeatherFetcher):
         noon_samples = pd.DataFrame(noon_rows)
         noon_samples.index = pd.DatetimeIndex(noon_times, tz=tz)
 
-        # 2) 24h-Niederschlag bis Mittag: (t-24h, t]
         pr_24h = []
         for tnoon in noon_samples.index:
             window_start = tnoon - pd.Timedelta(hours=24)
@@ -598,16 +515,13 @@ class WeatherGovFetcher(WeatherFetcher):
             pr_24h.append(float(0.0 if pd.isna(pr_sum) else pr_sum))
         noon_samples["pr"] = pr_24h
 
-        # 3) Erste Zeile droppen (braucht 24h-Historie)
         if len(noon_samples) >= 2:
             noon_samples = noon_samples.iloc[1:]
 
-        # 4) Auf gewünschte Anzahl Tage beschränken
         noon_samples = noon_samples.iloc[:days]
         if noon_samples.empty:
             raise RuntimeError("Too few data points to calculate FWI from weather.gov.")
 
-        # 5) Für xclim: Index tz-naiv (datetime64[ns] statt datetime64[ns, UTC])
         if noon_samples.index.tz is not None:
             noon_samples.index = noon_samples.index.tz_convert("UTC").tz_localize(None)
 
