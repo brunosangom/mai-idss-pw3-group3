@@ -13,7 +13,8 @@ Eric:
 
 Jan: 
     Frontend mockup
-Open:
+	
+Xueqin:
     Documentation 
 
 
