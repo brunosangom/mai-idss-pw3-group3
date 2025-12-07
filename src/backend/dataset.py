@@ -245,6 +245,10 @@ class WildfireDataset(Dataset):
         all_cols = list(set(required_cols + features))
         
         df = pd.read_csv(data_config['path'], usecols=all_cols)
+
+        logger.info("Applying data quality rules (imputation & clipping)...")
+        df = cls._preprocess_data(df)
+
         df = df.dropna(subset=['latitude', 'longitude', 'datetime'])
         df['datetime'] = pd.to_datetime(df['datetime'])
         df['Wildfire'] = df['Wildfire'].map({'Yes': 1, 'No': 0})
@@ -453,3 +457,64 @@ class WildfireDataset(Dataset):
             all_cols = list(set(required_cols + features))
             return len(all_cols) - 1  # Exclude 'Wildfire' label
         return self.sequences[0].shape[1]
+    
+    @staticmethod
+    def _preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Applies cleaning rules based on domain knowledge and dataset quirks.
+        1. Deduplication.
+        2. Sentinel Removal (Fixes the 25,725 'outliers' which are actually missing data).
+        3. Unit Conversion (Kelvin -> Celsius).
+        4. Imputation & Clipping.
+        """
+        # 1. Deduplication
+        initial_len = len(df)
+        df = df.drop_duplicates()
+        if len(df) < initial_len:
+            logging.getLogger(__name__).info(f"Dropped {initial_len - len(df)} duplicate rows")
+
+        # 2. Handle Sentinel Values (Critical fix for FireCastRL/GRIDMET)
+        # 32767 is often used as "Missing Value" in this type of data.
+        # We replace anything unusually large (>10000) with NaN so it gets imputed later.
+        numeric_cols = df.select_dtypes(include=np.number).columns
+        # Only apply to weather columns, not lat/lon
+        weather_cols = [c for c in numeric_cols if c not in ['latitude', 'longitude', 'year']]
+        
+        for col in weather_cols:
+            # If we find values near short-int max (32767), treat as missing
+            count_sentinels = (df[col] > 30000).sum()
+            if count_sentinels > 0:
+                logging.getLogger(__name__).info(f"Col {col}: Found {count_sentinels} sentinel values (likely 32767). Marking as NaN.")
+                df.loc[df[col] > 30000, col] = np.nan
+
+        # 3. Unit Conversion: Kelvin -> Celsius
+        # Docs say Celsius, but data (e.g. 282.0) proves Kelvin.
+        for col in ['tmmn', 'tmmx', 'tas']:
+            if col in df.columns:
+                # Heuristic: If median > 100, it's Kelvin
+                if df[col].median() > 100:
+                    df[col] = df[col] - 273.15
+
+        # 4. Imputation
+        # Now that 32767 is NaN, this linear interpolation will fix those gaps accurately
+        if df.isnull().values.any():
+            df = df.interpolate(method='linear', limit_direction='both')
+            df = df.fillna(method='bfill').fillna(method='ffill')
+
+        # 5. Physical Constraints (Clipping)
+        # 5a. Humidity (0-100%)
+        for col in ['rmax', 'rmin', 'fm100', 'fm1000', 'hurs']:
+            if col in df.columns:
+                df[col] = df[col].clip(0, 100)
+        
+        # 5b. Non-negative variables
+        for col in ['pr', 'srad', 'vs', 'sph', 'vpd', 'bi', 'erc', 'etr', 'pet']:
+            if col in df.columns:
+                df[col] = df[col].clip(lower=0)
+                
+        # 5c. Temperature safety clip (Celsius bounds)
+        for col in ['tmmn', 'tmmx', 'tas']:
+            if col in df.columns:
+                df[col] = df[col].clip(-60, 60)
+
+        return df
