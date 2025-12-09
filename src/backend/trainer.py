@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from torch.utils.tensorboard import SummaryWriter
 import logging
 import os
 import numpy as np
@@ -12,6 +13,7 @@ import pandas as pd
 from config import ExperimentConfig
 from dataset import WildfireDataset
 from metrics import create_metrics
+from models import create_model
 from utils import set_seed
 
 
@@ -32,6 +34,7 @@ class Trainer:
         self._setup_logging()
         self._setup_seed()
         self._setup_device()
+        self._setup_tensorboard()
         self._init_datasets()
         self._init_model()
         self._init_training_components()
@@ -56,6 +59,15 @@ class Trainer:
             self.device = torch.device('cpu')
             self.logger.info("CUDA not available, using CPU")
 
+    def _setup_tensorboard(self):
+        """Initialize TensorBoard SummaryWriter."""
+        log_dir = os.path.join(
+            self.system_config.get('logs_dir', 'src/backend/logs/'),
+            self.system_config['experiment_id']
+        )
+        self.writer = SummaryWriter(log_dir=log_dir)
+        self.logger.info(f"TensorBoard logs will be saved to {log_dir}")
+
     def _init_datasets(self):
         self.logger.info("Initializing datasets...")
         self.train_dataset, self.val_dataset, self.test_dataset = WildfireDataset.create_splits(self.config)
@@ -74,50 +86,20 @@ class Trainer:
     def _init_model(self):
         self.logger.info("Initializing model...")
         model_name = self.model_config['name']
-        if model_name == 'Transformer':
-            params = self.model_config['params']
-            self.logger.debug(f"Model parameters: {params}")
-            d_model = params['d_model']
-            nhead = params['nhead']
-            num_layers = params['num_layers']
-
-            model_components = []
-            # Source embedding layer to transform from num_features to d_model
-            self.source_embedder = nn.Linear(self.num_features, d_model)
-            model_components.append(self.source_embedder)
-
-            # Target embedding layer to transform from binary labels to d_model
-            # self.target_embedder = nn.Embedding(num_embeddings=2, embedding_dim=d_model)
-            # model_components.append(self.target_embedder)
-
-            # Positional embedding to add positional information to the input sequences
-            self.pos_emb = nn.Parameter(torch.randn(1, self.data_config['window_size'], d_model)).to(self.device)
-
-            # The output of the transformer will be of shape (batch, seq_len, d_model)
-            encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
-            self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-            model_components.append(self.transformer)
-
-            # We need a linear layer to map this to a single output for binary classification
-            self.output_layer = nn.Sequential(
-                nn.Linear(d_model, 1),
-                nn.Sigmoid()
-            )
-            model_components.append(self.output_layer)
-
-            # Combine all components into a ModuleList for proper parameter tracking
-            self.model = nn.ModuleList(model_components)
-        else:
-            self.logger.error(f"Model {model_name} not supported.")
-            raise ValueError(f"Model {model_name} not supported.")
         
-        # Move model to device
-        self.model.to(self.device)
+        self.model = create_model(
+            model_config=self.model_config,
+            num_features=self.num_features,
+            window_size=self.data_config['window_size'],
+            device=self.device
+        )
+        
         self.logger.info(f"Model {model_name} initialized and moved to device: {self.device}.")
 
     def _init_training_components(self):
         loss_function_str = self.training_config.get('loss_function', 'BCE')
         self.minority_class_weight = self.training_config.get('minority_class_weight', 1.0)
+        self.focal_gamma = self.training_config.get('focal_gamma', 2.0)
         
         if loss_function_str == 'BCE':
             if self.minority_class_weight != 1.0:
@@ -127,6 +109,9 @@ class Trainer:
                 self.logger.info(f"Using weighted BCE loss with minority_class_weight={self.minority_class_weight}")
             else:
                 self.loss_fn = nn.BCELoss()
+        elif loss_function_str == 'Focal':
+            self.loss_fn = self._focal_loss
+            self.logger.info(f"Using Focal Loss with gamma={self.focal_gamma}, alpha={self.minority_class_weight}")
         else:
             raise ValueError(f"Loss function {loss_function_str} not supported.")
         optimizer_str = self.training_config.get('optimizer', 'Adam')
@@ -156,30 +141,67 @@ class Trainer:
         weighted_bce = bce * weights
         return weighted_bce.mean()
 
+    def _focal_loss(self, outputs, labels):
+        """Compute Focal Loss to address class imbalance.
+        
+        Focal Loss: FL(p_t) = -alpha_t * (1 - p_t)^gamma * log(p_t)
+        
+        Args:
+            outputs: Model predictions (probabilities between 0 and 1)
+            labels: Ground truth labels (0 or 1)
+            
+        The focusing parameter gamma reduces the loss contribution from easy examples
+        and extends the range in which an example receives low loss.
+        - gamma = 0 is equivalent to BCE loss
+        - gamma > 0 reduces the relative loss for well-classified examples (p_t > 0.5),
+          putting more focus on hard, misclassified examples
+        
+        Alpha weighting:
+        - minority_class_weight is applied to positive samples (label=1)
+        - weight 1.0 is applied to negative samples (label=0)
+        """
+        # Clamp outputs to avoid log(0)
+        eps = 1e-7
+        outputs = torch.clamp(outputs, eps, 1 - eps)
+        
+        # Compute p_t (probability of correct class)
+        p_t = torch.where(labels == 1, outputs, 1 - outputs)
+        
+        # Compute alpha_t (class weight for each sample)
+        alpha_t = torch.where(labels == 1,
+                              torch.tensor(self.minority_class_weight, device=labels.device),
+                              torch.tensor(1.0, device=labels.device))
+        
+        # Compute focal loss
+        focal_weight = (1 - p_t) ** self.focal_gamma
+        focal_loss = -alpha_t * focal_weight * torch.log(p_t)
+        
+        return focal_loss.mean()
+
     def _create_metrics(self):
         metric_names = self.training_config.get('metrics', [])
         return create_metrics(metric_names, threshold=self.threshold, device=self.device)
 
+    def _update_metrics(self, preds, targets, prev_targets=None):
+        """
+        Update all metrics, handling fire onset metrics that require prev_targets.
+        
+        Args:
+            preds: Model predictions for current timestep
+            targets: Ground truth labels for current timestep
+            prev_targets: Ground truth labels for previous timestep (for onset detection)
+        """
+        for name, metric in self.metrics.items():
+            if 'FireOnset' in name:
+                # Fire onset metrics need prev_targets
+                metric.update(preds, targets, prev_targets)
+            else:
+                # Standard metrics
+                metric.update(preds, targets)
+
     def _forward(self, sequences, targets):
-        """Forward pass through the model with embedding layer."""    
-        # Apply source embedding to transform from num_features to d_model
-        input = self.source_embedder(sequences) # (batch, seq_len, d_model)
-
-        # Apply target embedding to transform from binary labels to d_model
-        # input += self.target_embedder(targets) # (batch, seq_len, d_model)
-
-        # Combine source, target embeddings and positional embeddings
-        input += self.pos_emb # (batch, seq_len, d_model)
-        
-        # For a transformer, source and target can be the same for this task
-        transformer_out = self.transformer(input) # (batch, seq_len, d_model)
-        
-        # Apply output layer
-        outputs = self.output_layer(transformer_out) # (batch, seq_len, 1)
-        
-        # Reshape outputs for loss calculation
-        outputs = outputs.squeeze(-1) # (batch, seq_len)
-        return outputs
+        """Forward pass through the model."""
+        return self.model(sequences, targets)
 
     def train(self):
         self.logger.info("Starting training...")
@@ -205,17 +227,25 @@ class Trainer:
                 outputs = self._forward(sequences, targets) # (batch, seq_len)
 
                 labels = labels.float()
-                loss = self.loss_fn(outputs, labels)
+                # Only compute loss on the last timestep (matches metric evaluation)
+                loss = self.loss_fn(outputs[:, -1], labels[:, -1])
                 loss.backward()
                 self.optimizer.step()
                 
                 # We only care about the last time step for metrics
-                self.metrics.update(outputs[:, -1], labels[:, -1])
+                # Pass second-to-last label as prev_target for fire onset detection
+                prev_labels = labels[:, -2] if labels.size(1) > 1 else None
+                self._update_metrics(outputs[:, -1], labels[:, -1], prev_labels)
                 train_pbar.set_postfix(loss=f"{loss.item():.4f}")
 
             train_metrics = self.metrics.compute()
             self.metrics.reset()
             self.logger.info(f"Epoch {epoch+1} - Train Loss: {loss.item():.4f}, Metrics: {train_metrics}")
+
+            # Log training metrics to TensorBoard
+            self.writer.add_scalar('Loss/train', loss.item(), epoch + 1)
+            for metric_name, metric_value in train_metrics.items():
+                self.writer.add_scalar(f'{metric_name}/train', metric_value, epoch + 1)
 
             self._validate(epoch)
         
@@ -245,17 +275,25 @@ class Trainer:
                 outputs = self._forward(sequences, targets)
                 
                 labels = labels.float()
-                loss = self.loss_fn(outputs, labels)
+                # Only compute loss on the last timestep (matches metric evaluation)
+                loss = self.loss_fn(outputs[:, -1], labels[:, -1])
                 total_val_loss += loss.item()
                 
                 # We only care about the last time step for metrics
-                self.metrics.update(outputs[:, -1], labels[:, -1])
+                # Pass second-to-last label as prev_target for fire onset detection
+                prev_labels = labels[:, -2] if labels.size(1) > 1 else None
+                self._update_metrics(outputs[:, -1], labels[:, -1], prev_labels)
                 val_pbar.set_postfix(loss=f"{loss.item():.4f}")
         
         avg_val_loss = total_val_loss / len(self.val_loader)
         val_metrics = self.metrics.compute()
         self.metrics.reset()
         self.logger.info(f"Epoch {epoch+1} - Validation Loss: {avg_val_loss:.4f}, Metrics: {val_metrics}")
+
+        # Log validation metrics to TensorBoard
+        self.writer.add_scalar('Loss/val', avg_val_loss, epoch + 1)
+        for metric_name, metric_value in val_metrics.items():
+            self.writer.add_scalar(f'{metric_name}/val', metric_value, epoch + 1)
 
         if avg_val_loss < self.best_val_loss:
             self.best_val_loss = avg_val_loss
@@ -351,13 +389,15 @@ class Trainer:
                 outputs = self._forward(sequences, targets)
 
                 labels = labels.float()
-                loss = self.loss_fn(outputs, labels)
+                # Only compute loss on the last timestep (matches metric evaluation)
+                loss = self.loss_fn(outputs[:, -1], labels[:, -1])
                 total_test_loss += loss.item()
 
                 # We only care about the last time step for metrics
                 last_step_preds = outputs[:, -1]
                 last_step_labels = labels[:, -1]
-                self.metrics.update(last_step_preds, last_step_labels)
+                prev_labels = labels[:, -2] if labels.size(1) > 1 else None
+                self._update_metrics(last_step_preds, last_step_labels, prev_labels)
                 
                 # Collect predictions for CSV
                 all_raw_preds.extend(last_step_preds.cpu().numpy())
@@ -371,8 +411,17 @@ class Trainer:
         self.metrics.reset()
         self.logger.info(f"Test Loss: {avg_test_loss:.4f}, Metrics: {test_metrics}")
         
-        # Save test results to CSV
-        self._save_test_results(all_raw_preds, all_pred_wildfires, all_gt_wildfires)
+        # Log test metrics to TensorBoard
+        self.writer.add_scalar('Loss/test', avg_test_loss)
+        for metric_name, metric_value in test_metrics.items():
+            self.writer.add_scalar(f'{metric_name}/test', metric_value)
+        
+        # Save test results to CSV if configured
+        if self.training_config.get('save_results', True):
+            self._save_test_results(all_raw_preds, all_pred_wildfires, all_gt_wildfires)
+        
+        # Close TensorBoard writer
+        self.writer.close()
         
         self.logger.info("Testing finished.")
 

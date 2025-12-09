@@ -37,29 +37,42 @@ data:
 
 # Model configuration
 model:
-  name: "Transformer"
+  # name: "Transformer"
+  # params:
+  #   d_model: 32
+  #   nhead: 4
+  #   num_layers: 2
+  #   dim_feedforward: 512
+  #   dropout: 0.1
+  name: LSTM
   params:
-    d_model: 32
-    nhead: 4
+    hidden_size: 64
     num_layers: 2
-    dim_feedforward: 512
     dropout: 0.1
+    bidirectional: false
   threshold: 0.5
 
 # Training configuration
 training:
   batch_size: 32
   epochs: 5
-  max_steps_per_epoch: null
+  max_steps_per_epoch: 10000
   learning_rate: 0.001
+  # Loss function options: "BCE" (Binary Cross Entropy) or "Focal" (Focal Loss)
+  # Focal Loss is recommended for highly imbalanced datasets as it down-weights easy examples
   loss_function: "BCE"
-  minority_class_weight: 16.5  # Weight for positive class (wildfire=1) to address class imbalance. Negative class has weight 1.0.
+  minority_class_weight: 3  # Weight for positive class (wildfire=1) to address class imbalance. Negative class has weight 1.0.
+  focal_gamma: 2.0  # Focusing parameter for Focal Loss (only used when loss_function="Focal"). Higher values focus more on hard examples.
   optimizer: "Adam"
   tune_threshold: True  # If True, tunes threshold on validation set based on F1 score after training
+  save_results: False  # If True, saves test predictions to CSV file in results directory
   metrics:
     - "Precision"
     - "Recall"
     - "F1Score"
+    - "AUROC"
+    - "FireOnsetF1"
+    - "FireOnsetRecall"
     - TrueWildfires
     - PredictedWildfires
 
