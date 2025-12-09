@@ -102,7 +102,7 @@ class FireOnsetMetric(torchmetrics.Metric):
         return f1
 
 
-class FireOnsetRecallMetric(torchmetrics.Metric):
+class FireOnsetRecall(torchmetrics.Metric):
     """
     Metric that measures recall specifically for fire onset events.
     
@@ -135,6 +135,40 @@ class FireOnsetRecallMetric(torchmetrics.Metric):
         return self.tp / (self.tp + self.fn + 1e-8)
 
 
+class FalseAlarmRate(torchmetrics.Metric):
+    """
+    Metric that measures the False Alarm Rate (False Positive Rate).
+    
+    False Alarm Rate = FP / (FP + TN) = proportion of actual negatives that were incorrectly predicted as positive.
+    
+    This is particularly important for wildfire detection systems, as false alarms can lead to:
+    - Wasted emergency resources
+    - Reduced trust in the system
+    - Alert fatigue
+    
+    Lower values are better (0 is perfect, 1 is worst).
+    """
+    
+    def __init__(self, threshold: float = 0.5):
+        super().__init__()
+        self.threshold = threshold
+        self.add_state("fp", default=torch.tensor(0), dist_reduce_fx="sum")
+        self.add_state("tn", default=torch.tensor(0), dist_reduce_fx="sum")
+    
+    def update(self, preds: torch.Tensor, target: torch.Tensor):
+        binary_preds = (preds >= self.threshold).long()
+        target = target.long()
+        
+        # False positives: predicted fire (1) but actual no fire (0)
+        self.fp += ((binary_preds == 1) & (target == 0)).sum()
+        # True negatives: predicted no fire (0) and actual no fire (0)
+        self.tn += ((binary_preds == 0) & (target == 0)).sum()
+    
+    def compute(self):
+        """Compute False Alarm Rate (FPR)."""
+        return self.fp / (self.fp + self.tn + 1e-8)
+
+
 def create_metrics(metric_names: list, threshold: float = 0.5, device: torch.device = None) -> torchmetrics.MetricCollection:
     """
     Create a MetricCollection based on the provided metric names.
@@ -164,7 +198,9 @@ def create_metrics(metric_names: list, threshold: float = 0.5, device: torch.dev
         elif name == "FireOnsetF1":
             metrics.append(FireOnsetMetric(threshold=threshold))
         elif name == "FireOnsetRecall":
-            metrics.append(FireOnsetRecallMetric(threshold=threshold))
+            metrics.append(FireOnsetRecall(threshold=threshold))
+        elif name == "FalseAlarmRate":
+            metrics.append(FalseAlarmRate(threshold=threshold))
         else:
             raise ValueError(f"Metric {name} not supported.")
     
