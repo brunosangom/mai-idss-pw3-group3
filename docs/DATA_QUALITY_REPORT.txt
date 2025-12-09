@@ -1,0 +1,31 @@
+=== QUALITY REPORT: RAW DATA (BEFORE) ===
+[1] Structure: 9509925 rows, 19 columns
+    ! WARNING: Found 13920 duplicate rows
+[2] Missing Data: None
+[3] Physical Consistency Check
+    ! WARNING: pr has 25725 values outside [0, 1000]
+    ! WARNING: rmax has 25725 values outside [0, 100]
+    ! WARNING: rmin has 25725 values outside [0, 100]
+    ! WARNING: sph has 25725 values outside [0, 0.05]
+    ! WARNING: srad has 25725 values outside [0, 1361]
+    ! CRITICAL: tmmn has 9509925 failures. Mean outlier value: 368.2.
+      -> DIAGNOSIS: Data is likely in KELVIN. Expected CELSIUS.
+    ! CRITICAL: tmmx has 9509925 failures. Mean outlier value: 382.1.
+      -> DIAGNOSIS: Data is likely in KELVIN. Expected CELSIUS.
+    ! WARNING: vs has 25725 values outside [0, 100]
+    ! WARNING: vpd has 25725 values outside [0, 10]
+    ! WARNING: fm100 has 25725 values outside [0, 100]
+    ! WARNING: fm1000 has 25725 values outside [0, 100]
+    ! WARNING: erc has 25725 values outside [0, 200]
+    ! WARNING: bi has 25725 values outside [0, 400]
+    ! WARNING: etr has 26429 values outside [0, 20]
+    ! WARNING: pet has 25725 values outside [0, 20]
+=== END RAW DATA (BEFORE) ===
+
+----------------------------------------
+=== QUALITY REPORT: PROCESSED DATA (AFTER) ===
+[1] Structure: 9496005 rows, 19 columns
+[2] Missing Data: None
+[3] Physical Consistency Check
+    ! WARNING: etr has 701 values outside [0, 20]
+=== END PROCESSED DATA (AFTER) ===

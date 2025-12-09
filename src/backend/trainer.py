@@ -62,7 +62,7 @@ class Trainer:
     def _setup_tensorboard(self):
         """Initialize TensorBoard SummaryWriter."""
         log_dir = os.path.join(
-            self.system_config.get('logs_dir', 'src/backend/logs/'),
+            self.system_config.get('log_dir', 'logs/'),
             self.system_config['experiment_id']
         )
         self.writer = SummaryWriter(log_dir=log_dir)
