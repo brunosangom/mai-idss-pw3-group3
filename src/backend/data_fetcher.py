@@ -12,10 +12,10 @@ class WeatherFetcher(ABC):
         Expected return format: DataFrame with columns:
         index: datetime (tz-aware, UTC)
         columns:
-            - tas      (°C)     -- temperature (ca. 2 m)
-            - hurs     (%)      -- humidity
-            - sfcWind  (km/h)   -- wind speed (ca. 10 m)
-            - precip   (mm/h)   -- precip
+            - tas      (°C)     -- temperatur (at noon)
+            - hurs     (%)      -- humidity (at noon)
+            - sfcWind  (km/h)   -- wind speed  (at noon)
+            - precip   (mm/h)   -- precip (at noon)
             - pr       (mm)     -- 24h-precip until noon
         """
         pass
