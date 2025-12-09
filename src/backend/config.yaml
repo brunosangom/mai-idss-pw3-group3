@@ -44,7 +44,9 @@ model:
   #   num_layers: 2
   #   dim_feedforward: 512
   #   dropout: 0.1
-  name: LSTM
+  # Best configuration from grid search: LSTM_medium_BCE_weight10
+  # Results: F1=0.381, AUROC=0.859, Precision=0.303, Recall=0.515
+  name: "LSTM"
   params:
     hidden_size: 64
     num_layers: 2
@@ -55,26 +57,28 @@ model:
 # Training configuration
 training:
   batch_size: 32
-  epochs: 5
+  epochs: 20
   max_steps_per_epoch: 10000
   learning_rate: 0.001
   # Loss function options: "BCE" (Binary Cross Entropy) or "Focal" (Focal Loss)
   # Focal Loss is recommended for highly imbalanced datasets as it down-weights easy examples
   loss_function: "BCE"
-  minority_class_weight: 3  # Weight for positive class (wildfire=1) to address class imbalance. Negative class has weight 1.0.
+  minority_class_weight: 10  # Weight for positive class (wildfire=1) to address class imbalance. Negative class has weight 1.0.
   focal_gamma: 2.0  # Focusing parameter for Focal Loss (only used when loss_function="Focal"). Higher values focus more on hard examples.
   optimizer: "Adam"
-  tune_threshold: True  # If True, tunes threshold on validation set based on F1 score after training
-  save_results: False  # If True, saves test predictions to CSV file in results directory
+  tune_threshold: True  # If True, tunes threshold on validation set based on FireOnsetRecall after training
+  max_false_alarm_rate: 0.25  # Maximum allowed False Alarm Rate during threshold tuning (only used when tune_threshold=True)
+  save_results: True  # If True, saves test predictions to CSV file in results directory
   metrics:
+    - "FireOnsetRecall"
+    - "FalseAlarmRate"
+    - "AUROC"
+    - "TrueWildfires"
+    - "PredictedWildfires"
     - "Precision"
     - "Recall"
     - "F1Score"
-    - "AUROC"
-    - "FireOnsetF1"
-    - "FireOnsetRecall"
-    - TrueWildfires
-    - PredictedWildfires
+    # - "FireOnsetF1"
 
 # System configuration
 system:

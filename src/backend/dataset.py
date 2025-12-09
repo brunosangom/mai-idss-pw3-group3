@@ -14,9 +14,6 @@ from pathlib import Path
 
 class WildfireDataset(Dataset):
 
-    # Default cache directory relative to data path
-    CACHE_DIR = "data/preprocessed_cache"
-
     def __init__(self, config, split='train', _preprocessed_df=None, _feature_cols=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
@@ -60,7 +57,8 @@ class WildfireDataset(Dataset):
             dict: Dictionary with 'train', 'val', 'test' keys and file paths as values
         """
         cache_key = cls._get_cache_key(config)
-        cache_dir = Path(cls.CACHE_DIR)
+        data_dir = Path(config.get_data_config().get('path', '../../data/')).parent
+        cache_dir = data_dir / "preprocessed_cache"
         
         return {
             'train': cache_dir / f"train_{cache_key}.csv",
@@ -164,7 +162,8 @@ class WildfireDataset(Dataset):
         """
         logger = logging.getLogger(__name__)
         cache_paths = cls._get_cache_paths(config)
-        cache_dir = Path(cls.CACHE_DIR)
+        data_dir = Path(config.get_data_config().get('path', '../../data/')).parent
+        cache_dir = data_dir / "preprocessed_cache"
         
         # Create cache directory if it doesn't exist
         cache_dir.mkdir(parents=True, exist_ok=True)
@@ -493,13 +492,13 @@ class WildfireDataset(Dataset):
             if col in df.columns:
                 # Heuristic: If median > 100, it's Kelvin
                 if df[col].median() > 100:
-                    df[col] = df[col] - 273.15
+                    df.loc[:, col] = df[col] - 273.15
 
         # 4. Imputation
         # Now that 32767 is NaN, this linear interpolation will fix those gaps accurately
         if df.isnull().values.any():
-            df = df.interpolate(method='linear', limit_direction='both')
-            df = df.fillna(method='bfill').fillna(method='ffill')
+            df = df.infer_objects(copy=False).interpolate(method='linear', limit_direction='both')
+            df = df.bfill().ffill()
 
         # 5. Physical Constraints (Clipping)
         # 5a. Humidity (0-100%)

@@ -62,7 +62,7 @@ class Trainer:
     def _setup_tensorboard(self):
         """Initialize TensorBoard SummaryWriter."""
         log_dir = os.path.join(
-            self.system_config.get('logs_dir', 'src/backend/logs/'),
+            self.system_config.get('log_dir', 'logs/'),
             self.system_config['experiment_id']
         )
         self.writer = SummaryWriter(log_dir=log_dir)
@@ -306,10 +306,11 @@ class Trainer:
         self.logger.info(f"Saved new best model to {checkpoint_path}")
 
     def _collect_predictions(self, data_loader, desc="Collecting predictions"):
-        """Collect all predictions and labels from a data loader."""
+        """Collect all predictions, labels, and previous labels from a data loader."""
         self.model.eval()
         all_probs = []
         all_labels = []
+        all_prev_labels = []
         
         with torch.no_grad():
             pbar = tqdm(data_loader, desc=desc, leave=True)
@@ -325,41 +326,56 @@ class Trainer:
                 # We only care about the last time step
                 all_probs.append(outputs[:, -1].cpu().numpy())
                 all_labels.append(labels[:, -1].cpu().numpy())
+                # Collect second-to-last label for onset detection
+                prev_labels = labels[:, -2] if labels.size(1) > 1 else torch.zeros_like(labels[:, -1])
+                all_prev_labels.append(prev_labels.cpu().numpy())
         
-        return np.concatenate(all_probs), np.concatenate(all_labels)
+        return np.concatenate(all_probs), np.concatenate(all_labels), np.concatenate(all_prev_labels)
 
     def _tune_threshold(self):
-        """Tune the classification threshold based on F1 score using validation data."""
-        self.logger.info("Tuning threshold based on F1 score...")
+        """Tune the classification threshold to maximize FireOnsetRecall while keeping FAR below max_false_alarm_rate."""
+        max_far = self.training_config.get('max_false_alarm_rate', 0.25)
+        self.logger.info(f"Tuning threshold to maximize FireOnsetRecall with FAR <= {max_far:.4f}...")
         
         # Load best model
         self.model.load_state_dict(torch.load(self.system_config['checkpoint_path'], map_location=self.device))
         
         # Collect predictions on validation set
-        y_probs, y_true = self._collect_predictions(self.val_loader, desc="Collecting validation predictions")
+        y_probs, y_true, y_prev = self._collect_predictions(self.val_loader, desc="Collecting validation predictions")
+        
+        # Identify fire onset events: previous was 0, current is 1
+        actual_onset = (y_prev == 0) & (y_true == 1)
         
         # Search for optimal threshold
         thresholds = np.linspace(0.01, 0.99, 99)
-        best_f1 = 0
+        best_recall = 0
         best_threshold = 0.5
+        best_far = 1.0
         
         for thresh in thresholds:
             y_pred = (y_probs >= thresh).astype(int)
             
-            # Calculate F1 score
-            tp = np.sum((y_pred == 1) & (y_true == 1))
-            fp = np.sum((y_pred == 1) & (y_true == 0))
-            fn = np.sum((y_pred == 0) & (y_true == 1))
+            # Calculate False Alarm Rate: FP / (FP + TN)
+            fp = np.sum((y_true == 0) & (y_pred == 1))
+            tn = np.sum((y_true == 0) & (y_pred == 0))
+            far = fp / (fp + tn + 1e-8)
             
-            precision = tp / (tp + fp + 1e-8)
+            # Only consider thresholds that satisfy FAR constraint
+            if far > max_far:
+                continue
+            
+            # Calculate FireOnsetRecall: TP / (TP + FN)
+            tp = np.sum((actual_onset) & (y_pred == 1))
+            fn = np.sum((actual_onset) & (y_pred == 0))
             recall = tp / (tp + fn + 1e-8)
-            f1 = 2 * (precision * recall) / (precision + recall + 1e-8)
             
-            if f1 > best_f1:
-                best_f1 = f1
+            # Select threshold with highest recall among valid FAR thresholds
+            if recall > best_recall:
+                best_recall = recall
                 best_threshold = thresh
+                best_far = far
         
-        self.logger.info(f"Optimal threshold: {best_threshold:.4f} (F1: {best_f1:.4f})")
+        self.logger.info(f"Optimal threshold: {best_threshold:.4f} (FireOnsetRecall: {best_recall:.4f}, FAR: {best_far:.4f})")
         
         # Update threshold and recreate metrics with new threshold
         self.threshold = best_threshold
@@ -367,7 +383,7 @@ class Trainer:
         self.logger.info(f"Threshold updated to {self.threshold:.4f}")
 
     def _test(self):
-        self.logger.info("Starting testing...")
+        self.logger.info("Starting testing with best model checkpoint...")
         self.model.load_state_dict(torch.load(self.system_config['checkpoint_path'], map_location=self.device))
         self.model.eval()
         total_test_loss = 0

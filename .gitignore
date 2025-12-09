@@ -14,3 +14,4 @@ __pycache__
 
 notebooks/data/
 src/backend/results/
+docs/internal_docs/
