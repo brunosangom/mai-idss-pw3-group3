@@ -1,0 +1,27 @@
+2025-12-09 16:25:02,081 - __main__ - INFO - Loaded configuration from config.yaml
+2025-12-09 16:25:02,081 - __main__ - DEBUG - Configuration: {'data': {'path': '../../data/Wildfire_Dataset.csv', 'features': ['pr', 'rmax', 'rmin', 'sph', 'srad', 'tmmn', 'tmmx', 'vs', 'bi', 'fm100', 'fm1000', 'erc', 'etr', 'pet', 'vpd'], 'split_ratios': {'train': 0.8, 'val': 0.1, 'test': 0.1}, 'window_size': 30, 'temporal_bucket': 'quarter'}, 'model': {'name': 'LSTM', 'params': {'hidden_size': 64, 'num_layers': 2, 'dropout': 0.1, 'bidirectional': False}, 'threshold': 0.5}, 'training': {'batch_size': 32, 'epochs': 20, 'max_steps_per_epoch': 10000, 'learning_rate': 0.001, 'loss_function': 'BCE', 'minority_class_weight': 10, 'focal_gamma': 2.0, 'optimizer': 'Adam', 'tune_threshold': True, 'max_false_alarm_rate': 0.25, 'save_results': True, 'metrics': ['FireOnsetRecall', 'FalseAlarmRate', 'AUROC', 'TrueWildfires', 'PredictedWildfires', 'Precision', 'Recall', 'F1Score']}, 'system': {'seed': 42, 'log_dir': 'logs/', 'results_dir': 'results/', 'checkpoint_dir': 'checkpoints/', 'verbose': True, 'experiment_id': '20251209_162502_610526ac'}}
+2025-12-09 16:25:02,154 - trainer - INFO - Random seed set to 42 for reproducibility
+2025-12-09 16:25:02,162 - trainer - INFO - Using CUDA device: NVIDIA GeForce RTX 4060 Laptop GPU
+2025-12-09 16:25:02,173 - trainer - INFO - TensorBoard logs will be saved to logs/20251209_162502_610526ac
+2025-12-09 16:25:02,173 - trainer - INFO - Initializing datasets...
+2025-12-09 16:25:02,175 - dataset - INFO - Found cached preprocessed data, loading from cache...
+2025-12-09 16:25:02,176 - dataset - INFO - Loading preprocessed data from cache (key: cc519be64356)
+2025-12-09 16:25:19,383 - dataset - INFO - Loaded train split (7859282 rows) from cache
+2025-12-09 16:25:21,102 - dataset - INFO - Loaded val split (788678 rows) from cache
+2025-12-09 16:25:22,888 - dataset - INFO - Loaded test split (848045 rows) from cache
+2025-12-09 16:25:24,962 - dataset - INFO - Creating sequences for 35923 groups in split 'train'
+2025-12-09 16:26:19,246 - dataset - DEBUG - Created 6792584 sequences for split train
+2025-12-09 16:26:20,965 - dataset - INFO - Creating sequences for 16284 groups in split 'val'
+2025-12-09 16:26:26,463 - dataset - DEBUG - Created 382493 sequences for split val
+2025-12-09 16:26:27,158 - dataset - INFO - Creating sequences for 16295 groups in split 'test'
+2025-12-09 16:26:35,681 - dataset - DEBUG - Created 430387 sequences for split test
+2025-12-09 16:26:35,703 - trainer - DEBUG - Train dataset initialized with 6792584 samples.
+2025-12-09 16:26:35,703 - trainer - DEBUG - Val dataset initialized with 382493 samples.
+2025-12-09 16:26:35,703 - trainer - DEBUG - Test dataset initialized with 430387 samples.
+2025-12-09 16:26:35,744 - trainer - INFO - Number of features: 19
+2025-12-09 16:26:35,744 - trainer - INFO - Initializing model...
+2025-12-09 16:26:36,955 - trainer - INFO - Model LSTM initialized and moved to device: cuda.
+2025-12-09 16:26:36,955 - trainer - INFO - Using weighted BCE loss with minority_class_weight=10
+2025-12-09 16:26:39,929 - trainer - INFO - Training components initialized.
+2025-12-09 16:26:39,930 - trainer - INFO - Starting training...
+2025-12-09 16:26:39,930 - trainer - INFO - Threshold used for metrics during training: 0.5

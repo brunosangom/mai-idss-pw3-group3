@@ -333,8 +333,9 @@ class Trainer:
         return np.concatenate(all_probs), np.concatenate(all_labels), np.concatenate(all_prev_labels)
 
     def _tune_threshold(self):
-        """Tune the classification threshold based on FireOnsetRecall using validation data."""
-        self.logger.info("Tuning threshold based on FireOnsetRecall...")
+        """Tune the classification threshold to maximize FireOnsetRecall while keeping FAR below max_false_alarm_rate."""
+        max_far = self.training_config.get('max_false_alarm_rate', 0.25)
+        self.logger.info(f"Tuning threshold to maximize FireOnsetRecall with FAR <= {max_far:.4f}...")
         
         # Load best model
         self.model.load_state_dict(torch.load(self.system_config['checkpoint_path'], map_location=self.device))
@@ -349,23 +350,32 @@ class Trainer:
         thresholds = np.linspace(0.01, 0.99, 99)
         best_recall = 0
         best_threshold = 0.5
+        best_far = 1.0
         
         for thresh in thresholds:
             y_pred = (y_probs >= thresh).astype(int)
             
-            # Calculate FireOnsetRecall: TP / (TP + FN)
-            # TP: actual onset and predicted fire
-            tp = np.sum((actual_onset) & (y_pred == 1))
-            # FN: actual onset but predicted no fire
-            fn = np.sum((actual_onset) & (y_pred == 0))
+            # Calculate False Alarm Rate: FP / (FP + TN)
+            fp = np.sum((y_true == 0) & (y_pred == 1))
+            tn = np.sum((y_true == 0) & (y_pred == 0))
+            far = fp / (fp + tn + 1e-8)
             
+            # Only consider thresholds that satisfy FAR constraint
+            if far > max_far:
+                continue
+            
+            # Calculate FireOnsetRecall: TP / (TP + FN)
+            tp = np.sum((actual_onset) & (y_pred == 1))
+            fn = np.sum((actual_onset) & (y_pred == 0))
             recall = tp / (tp + fn + 1e-8)
             
+            # Select threshold with highest recall among valid FAR thresholds
             if recall > best_recall:
                 best_recall = recall
                 best_threshold = thresh
+                best_far = far
         
-        self.logger.info(f"Optimal threshold: {best_threshold:.4f} (FireOnsetRecall: {best_recall:.4f})")
+        self.logger.info(f"Optimal threshold: {best_threshold:.4f} (FireOnsetRecall: {best_recall:.4f}, FAR: {best_far:.4f})")
         
         # Update threshold and recreate metrics with new threshold
         self.threshold = best_threshold

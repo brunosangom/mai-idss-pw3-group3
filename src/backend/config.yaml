@@ -67,7 +67,8 @@ training:
   focal_gamma: 2.0  # Focusing parameter for Focal Loss (only used when loss_function="Focal"). Higher values focus more on hard examples.
   optimizer: "Adam"
   tune_threshold: True  # If True, tunes threshold on validation set based on FireOnsetRecall after training
-  save_results: False  # If True, saves test predictions to CSV file in results directory
+  max_false_alarm_rate: 0.25  # Maximum allowed False Alarm Rate during threshold tuning (only used when tune_threshold=True)
+  save_results: True  # If True, saves test predictions to CSV file in results directory
   metrics:
     - "FireOnsetRecall"
     - "FalseAlarmRate"
