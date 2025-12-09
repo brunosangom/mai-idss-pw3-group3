@@ -7,8 +7,17 @@ import requests
 
 class WeatherFetcher(ABC):
     @abstractmethod
-    def fetch_data(self, lat, lon, past_days, days) -> dict:
-        """Fetch weather data for a given location."""
+    def fetch_data(self, lat, lon, past_days, days) -> pd.DataFrame:
+        """Fetch weather data for a given location.
+        Expected return format: DataFrame with columns:
+        index: datetime (tz-aware, UTC)
+        columns:
+            - tas      (°C)     -- temperature (ca. 2 m)
+            - hurs     (%)      -- humidity
+            - sfcWind  (km/h)   -- wind speed (ca. 10 m)
+            - precip   (mm/h)   -- precip
+            - pr       (mm)     -- 24h-precip until noon
+        """
         pass
 
 class OpenMeteoFetcher(WeatherFetcher):
