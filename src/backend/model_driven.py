@@ -22,7 +22,7 @@ class FWICalcalculator:
 
     def get_fwi(self, lat: float,
                 lon: float,
-                days: int = 7,
+                date: str = "2023-01-01",
                 past_days: int = 2,
                 *,
                 overwintering: bool = True,
@@ -33,10 +33,8 @@ class FWICalcalculator:
         """
         Calculate daily FWI values for a given location using Open-Meteo data and xclim.
         """
-        if days < 2:
-            days = 2
 
-        noon_samples = self.fetcher.fetch_data(lat, lon, past_days, days)
+        noon_samples = self.fetcher.fetch_data(lat, lon, date, past_days)
 
         # --- Build xarray Dataset with explicit UNITS (FIX) ---
         # ensure numeric dtypes (avoids object dtype sneaking in)
