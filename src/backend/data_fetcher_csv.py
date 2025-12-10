@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, date, timedelta
 
-from src.backend.data_fetcher import WeatherFetcher
+from data_fetcher import WeatherFetcher
 
 class CsvWeatherFetcher(WeatherFetcher):
     """

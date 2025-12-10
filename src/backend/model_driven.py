@@ -3,11 +3,16 @@ import requests
 import pandas as pd
 import xarray as xr
 from typing import List, Dict
+import warnings
+
+# Suppress pint unit redefinition warnings from xclim
+# These are harmless - xclim loads custom unit definitions that overlap with pint defaults
+warnings.filterwarnings('ignore', message='Redefining.*', module='pint.util')
 
 import xclim
 
-from src.backend.data_fetcher import WeatherFetcher, OpenMeteoFetcher, WeatherGovFetcher
-from src.backend.data_fetcher_csv import CsvWeatherFetcher
+from data_fetcher import WeatherFetcher, OpenMeteoFetcher, WeatherGovFetcher
+from data_fetcher_csv import CsvWeatherFetcher
 
 
 class FWICalcalculator:
