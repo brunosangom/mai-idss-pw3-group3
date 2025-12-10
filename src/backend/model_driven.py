@@ -6,7 +6,7 @@ from typing import List, Dict
 
 import xclim
 
-from src.backend.data_fetcher import WeatherFetcher, OpenMeteoFetcher, WeatherGovFetcher
+from data_fetcher import WeatherFetcher, OpenMeteoFetcher, WeatherGovFetcher
 
 
 class FWICalcalculator:

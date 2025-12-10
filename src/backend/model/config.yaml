@@ -1,0 +1,89 @@
+
+# Data configuration
+data:
+  path: "../../data/Wildfire_Dataset.csv"
+  features:
+    - "pr"
+    - "rmax"
+    - "rmin"
+    - "sph"
+    - "srad"
+    - "tmmn"
+    - "tmmx"
+    - "vs"
+    - "bi"
+    - "fm100"
+    - "fm1000"
+    - "erc"
+    - "etr"
+    - "pet"
+    - "vpd"
+  split_ratios:
+    train: 0.8
+    val: 0.1
+    test: 0.1
+  window_size: 30
+  # Temporal split strategy: controls how data is divided into train/val/test splits
+  # Options:
+  #   - 'sequential': Original chronological split (first X% -> train, next Y% -> val, rest -> test)
+  #                   WARNING: May cause temporal distribution shift if wildfire rates vary over time
+  #   - 'month': Assigns entire months to splits in round-robin fashion (balanced across time)
+  #   - 'quarter': Assigns entire quarters to splits in round-robin fashion (recommended)
+  #   - 'year': Assigns entire years to splits in round-robin fashion (coarsest granularity)
+  # The stratified options (month/quarter/year) ensure each split contains data from different
+  # time periods, preventing temporal distribution shift while maintaining temporal continuity
+  # within each bucket for proper sequence creation.
+  temporal_bucket: "quarter"
+
+# Model configuration
+model:
+  # name: "Transformer"
+  # params:
+  #   d_model: 32
+  #   nhead: 4
+  #   num_layers: 2
+  #   dim_feedforward: 512
+  #   dropout: 0.1
+  # Best configuration from grid search: LSTM_medium_BCE_weight10
+  # Results: F1=0.381, AUROC=0.859, Precision=0.303, Recall=0.515
+  name: "LSTM"
+  params:
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.1
+    bidirectional: false
+  threshold: 0.5
+
+# Training configuration
+training:
+  batch_size: 32
+  epochs: 20
+  max_steps_per_epoch: 10000
+  learning_rate: 0.001
+  # Loss function options: "BCE" (Binary Cross Entropy) or "Focal" (Focal Loss)
+  # Focal Loss is recommended for highly imbalanced datasets as it down-weights easy examples
+  loss_function: "BCE"
+  minority_class_weight: 10  # Weight for positive class (wildfire=1) to address class imbalance. Negative class has weight 1.0.
+  focal_gamma: 2.0  # Focusing parameter for Focal Loss (only used when loss_function="Focal"). Higher values focus more on hard examples.
+  optimizer: "Adam"
+  tune_threshold: True  # If True, tunes threshold on validation set based on FireOnsetRecall after training
+  max_false_alarm_rate: 0.25  # Maximum allowed False Alarm Rate during threshold tuning (only used when tune_threshold=True)
+  save_results: True  # If True, saves test predictions to CSV file in results directory
+  metrics:
+    - "FireOnsetRecall"
+    - "FalseAlarmRate"
+    - "AUROC"
+    - "TrueWildfires"
+    - "PredictedWildfires"
+    - "Precision"
+    - "Recall"
+    - "F1Score"
+    # - "FireOnsetF1"
+
+# System configuration
+system:
+  seed: 42  # Random seed for reproducibility (set to null to disable)
+  log_dir: "logs/"
+  results_dir: "results/"
+  checkpoint_dir: "checkpoints/"
+  verbose: True
