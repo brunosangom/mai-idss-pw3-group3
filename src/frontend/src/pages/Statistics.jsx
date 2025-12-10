@@ -1,4 +1,5 @@
 import React from 'react';
+import { Grid } from '@mui/material';
 import Card from '../components/Card';
 import FireTrendChart from '../components/charts/FireTrendChart';
 import FireComparisonChart from '../components/charts/FireComparisonChart';
@@ -7,30 +8,38 @@ import '../components/Content.css';
 
 function Statistics() {
   return (
-    <div className="content-grid">
-      <Card title="Weekly Wildfire Trend">
-        <FireTrendChart />
-      </Card>
+    <Grid container spacing={2} sx={{ width: '100%' }}>
+      <Grid item xs={12} md={4} sx={{ flex: { xs: '1 0 100%', md: 1 }, maxWidth: 'none' }}>
+        <Card title="Weekly Wildfire Trend">
+          <FireTrendChart />
+        </Card>
+      </Grid>
 
-      <Card title="Yearly Comparison">
-        <FireComparisonChart />
-      </Card>
+      <Grid item xs={12} md={4} sx={{ flex: { xs: '1 0 100%', md: 1 }, maxWidth: 'none' }}>
+        <Card title="Yearly Comparison">
+          <FireComparisonChart />
+        </Card>
+      </Grid>
 
-      <Card title="Monthly Seasonality">
-        <SeasonalityChart />
-      </Card>
+      <Grid item xs={12} md={4} sx={{ flex: { xs: '1 0 100%', md: 1 }, maxWidth: 'none' }}>
+        <Card title="Monthly Seasonality">
+          <SeasonalityChart />
+        </Card>
+      </Grid>
 
-      <Card title="Notes">
-        <div className="stack">
-          <p>Wildfire activity increases from spring to late summer; containment usually lags by 2–4 weeks.</p>
-          <ul className="list list--compact">
-            <li className="list-item">Hotspots: West and South regions.</li>
-            <li className="list-item">Resources: Aerial support at 75% utilization.</li>
-            <li className="list-item">Forecast: Elevated risk next 10 days.</li>
-          </ul>
-        </div>
-      </Card>
-    </div>
+      <Grid item xs={12} sx={{ flex: { xs: '1 0 100%', md: '1 0 100%' }, maxWidth: 'none' }}>
+        <Card title="Notes">
+          <div className="stack">
+            <p>Wildfire activity increases from spring to late summer; containment usually lags by 2–4 weeks.</p>
+            <ul className="list list--compact">
+              <li className="list-item">Hotspots: West and South regions.</li>
+              <li className="list-item">Resources: Aerial support at 75% utilization.</li>
+              <li className="list-item">Forecast: Elevated risk next 10 days.</li>
+            </ul>
+          </div>
+        </Card>
+      </Grid>
+    </Grid>
   );
 }
 

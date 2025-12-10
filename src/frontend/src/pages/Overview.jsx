@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Grid } from '@mui/material';
 import '../components/Content.css';
 import Card from '../components/Card';
 import Map from '../components/Map';
@@ -8,28 +9,31 @@ function Overview() {
   const toggleWide = () => setWideMap(w => !w);
 
   return (
-    <div className="content-grid overview-grid">
-      <Card
-        title="Map"
-        className={`map-card ${wideMap ? 'map-card--wide card--bleed' : ''}`}
-        actions={(
-          <button
-            type="button"
-            className="map-expand-btn"
-            aria-label={wideMap ? 'Collapse map width' : 'Expand map width'}
-            onClick={toggleWide}
-          >
-            {wideMap ? 'Collapse' : 'Expand'}
-          </button>
-        )}
-      >
-        <div className="map-slot">
-          <Map wide={wideMap} />
-        </div>
-      </Card>
+    <Grid container spacing={2} sx={{ width: '100%' }}>
+      <Grid item xs={12} md={wideMap ? 8 : 4} sx={{ flex: { xs: '1 0 100%', md: wideMap ? 2 : 1 }, maxWidth: 'none' }}>
+        <Card
+          title="Map"
+          className="card--bleed"
+          actions={(
+            <button
+              type="button"
+              className="map-expand-btn"
+              aria-label={wideMap ? 'Collapse map width' : 'Expand map width'}
+              onClick={toggleWide}
+            >
+              {wideMap ? 'Collapse' : 'Expand'}
+            </button>
+          )}
+        >
+          <div className="map-slot">
+            <Map wide={wideMap} />
+          </div>
+        </Card>
+      </Grid>
 
-      <Card title="Fire Situation">
-        <div className="mini-kpi-grid">
+      <Grid item xs={12} md={wideMap ? 4 : 4} sx={{ flex: { xs: '1 0 100%', md: 1 }, maxWidth: 'none' }}>
+        <Card title="Fire Situation">
+          <div className="mini-kpi-grid">
           <div className="mini-kpi mini-kpi--critical">
             <div className="mini-kpi-label">Active Fires</div>
             <div className="mini-kpi-value">42</div>
@@ -52,7 +56,9 @@ function Overview() {
           </div>
         </div>
       </Card>
+      </Grid>
 
+      <Grid item xs={12} md={wideMap ? 12 : 4} sx={{ flex: { xs: '1 0 100%', md: wideMap ? '1 0 100%' : 1 }, maxWidth: 'none' }}>
       <Card title="Environment & Resources">
         <div className="mini-kpi-grid">
           <div className="mini-kpi mini-kpi--neutral">
@@ -77,7 +83,8 @@ function Overview() {
           </div>
         </div>
       </Card>
-    </div>
+      </Grid>
+    </Grid>
   );
 }
 
