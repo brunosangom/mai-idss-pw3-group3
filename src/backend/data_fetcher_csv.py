@@ -6,7 +6,6 @@ import numpy as np
 from datetime import datetime, date, timedelta
 
 from src.backend.data_fetcher import WeatherFetcher
-from src.backend.model_driven import FWICalcalculator
 
 class CsvWeatherFetcher(WeatherFetcher):
     """
@@ -247,8 +246,6 @@ class CsvWeatherFetcher(WeatherFetcher):
 
 
 if __name__ == "__main__":
-    fetcher = CsvWeatherFetcher("../../data/Wildfire_Dataset.csv")
-    calculator = FWICalcalculator(fetcher)
     vals = calculator.get_fwi(39.7392, -104.9903, "2018-08-15")
     for row in vals:
         print(row)

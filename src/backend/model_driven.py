@@ -6,16 +6,17 @@ from typing import List, Dict
 
 import xclim
 
-from data_fetcher import WeatherFetcher, OpenMeteoFetcher, WeatherGovFetcher
+from src.backend.data_fetcher import WeatherFetcher, OpenMeteoFetcher, WeatherGovFetcher
+from src.backend.data_fetcher_csv import CsvWeatherFetcher
 
 
 class FWICalcalculator:
     """Calculate the Fire Weather Index (FWI) using Open-Meteo data and xclim."""
-    def __init__(self, fetcher: WeatherFetcher = None):
+    def __init__(self, fetcher: WeatherFetcher = None, fetcher_param : str = None):
         # precipitation threshold for FWI calculations
         self.prec_thresh = "1.5 mm/d"
-        if fetcher is None:
-            self.fetcher = WeatherGovFetcher()
+        if fetcher is None and fetcher_param is not None:
+            self.fetcher = CsvWeatherFetcher(fetcher_param)
         else:
             self.fetcher = fetcher
 
@@ -132,7 +133,7 @@ class FWICalcalculator:
 
 # --- Example call ---
 if __name__ == "__main__":
-    calculator = FWICalcalculator()
-    vals = calculator.get_fwi(39.7392, -104.9903, days=7)
+    calculator = FWICalcalculator(fetcher_param="../../data/Wildfire_Dataset.csv")
+    vals = calculator.get_fwi(39.7392, -104.9903, "2020-03-01")
     for row in vals:
         print(row)
