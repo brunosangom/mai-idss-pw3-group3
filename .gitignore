@@ -1,5 +1,7 @@
 # Ignore everything in the data folder
 /data/*
+!Wildfire_Dataset_Reduced.csv
+!README_Reduced_Dataset.md
 
 # Except .gitkeep
 !/data/.gitkeep
