@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pandas as pd
+import numpy as np
 import json
 import uuid
 from datetime import datetime
@@ -484,10 +485,6 @@ def predict_all():
             except:
                 continue
         
-        #################################################### Temporary limit for testing
-        stations = stations[:5]
-        #################################################### TODO remove
-        
         # Initialize predictor and ensure cache is loaded
         predictor = get_or_init_predictor()
         # Explicitly load data to satisfy "Wait until parquet cache is loaded"
@@ -576,6 +573,77 @@ def predict_all():
     except Exception as e:
         logger.exception(f"Error in predict_all: {e}")
         return jsonify({'error': str(e), 'status': 'error'}), 500
+
+
+@app.route('/api/historical-analysis')
+def historical_analysis():
+    try:
+        # 1. Weather Trends (Pre-calculated)
+        trends_path = os.path.join(os.path.dirname(__file__), '../../data/weather_trends.json')
+        if os.path.exists(trends_path):
+            with open(trends_path, 'r') as f:
+                trends_data = json.load(f)
+        else:
+            trends_data = []
+
+        # 2. Prediction Analysis (from station_predictions.csv)
+        pred_path = os.path.join(os.path.dirname(__file__), '../../data/station_predictions.csv')
+        
+        prediction_accuracy = []
+        error_trends = []
+        hardest_stations = []
+        
+        if os.path.exists(pred_path):
+            pred_df = pd.read_csv(pred_path)
+            
+            # Accuracy per station over time
+            pred_df['correct'] = (pred_df['prediction'] == pred_df['ground_truth']).astype(int)
+            station_yearly = pred_df.groupby(['station_name', 'year'])['correct'].mean().reset_index()
+            
+            stations = station_yearly['station_name'].unique()
+            # Limit to top 5 for clarity in line chart if too many
+            for station in stations[:5]: 
+                station_data = station_yearly[station_yearly['station_name'] == station]
+                prediction_accuracy.append({
+                    "id": station,
+                    "data": [{"x": int(row['year']), "y": round(row['correct'] * 100, 1)} for _, row in station_data.iterrows()]
+                })
+                
+            # FP/FN Trends
+            pred_df['fp'] = ((pred_df['prediction'] == 1) & (pred_df['ground_truth'] == 0)).astype(int)
+            pred_df['fn'] = ((pred_df['prediction'] == 0) & (pred_df['ground_truth'] == 1)).astype(int)
+            
+            global_errors = pred_df.groupby('year').agg({
+                'fp': 'sum',
+                'fn': 'sum',
+                'station_name': 'count'
+            }).reset_index()
+            
+            for _, row in global_errors.iterrows():
+                total = row['station_name']
+                error_trends.append({
+                    "year": int(row['year']),
+                    "fp_rate": round(row['fp'] / total * 100, 2),
+                    "fn_rate": round(row['fn'] / total * 100, 2)
+                })
+                
+            # Hardest Stations
+            station_overall = pred_df.groupby('station_name')['correct'].mean().sort_values().head(5).reset_index()
+            hardest_stations = [
+                {"name": row['station_name'], "accuracy": round(row['correct'] * 100, 1)}
+                for _, row in station_overall.iterrows()
+            ]
+
+        return jsonify({
+            "weather_trends": trends_data,
+            "prediction_accuracy": prediction_accuracy,
+            "error_trends": error_trends,
+            "hardest_stations": hardest_stations
+        })
+
+    except Exception as e:
+        logger.error(f"Error in historical analysis: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

@@ -59,7 +59,7 @@ function Forecast() {
           wide={wideMap}
           onToggleWide={() => setWideMap(w => !w)}
           loading={loading}
-          referenceDate={new Date('2018-07-15')}
+          referenceDate={new Date('2014-07-15')}
         />
       </Grid>
       <Grid item xs={12} md={wideMap ? 4 : 6} sx={{ flex: { xs: '1 0 100%', md: 1 }, maxWidth: 'none' }}>
