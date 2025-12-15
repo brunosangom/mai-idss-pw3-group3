@@ -53,7 +53,7 @@ function Overview() {
         // Calculate offset from today
         // The backend returns T-7 to T-0.
         const date = new Date(day.date);
-        const today = new Date('2018-07-15');
+        const today = new Date('2014-07-15');
         // Reset time part
         date.setHours(0,0,0,0);
         today.setHours(0,0,0,0);
@@ -82,7 +82,7 @@ function Overview() {
           wide={wideMap}
           onToggleWide={() => setWideMap(w => !w)}
           loading={loading}
-          referenceDate={new Date('2018-07-15')}
+          referenceDate={new Date('2014-07-15')}
         />
       </Grid>
 

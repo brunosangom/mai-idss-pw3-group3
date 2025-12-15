@@ -22,8 +22,8 @@ function Sidebar({ collapsed = false, onToggle }) {
       <nav>
         <ul>
           <SidebarItem to="/" end icon={FiHome} label="Overview" />
-          <SidebarItem to="/statistics" icon={FiBarChart2} label="Statistics" />
           <SidebarItem to="/forecast" icon={FiTrendingUp} label="Forecast" />
+          <SidebarItem to="/statistics" icon={FiBarChart2} label="Statistics"/>
           <SidebarItem to="/historical" icon={FiClock} label="Historical Data" />
         </ul>
       </nav>

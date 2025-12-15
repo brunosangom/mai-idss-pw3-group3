@@ -48,12 +48,6 @@ flask --app app run --debug
 
 The API will be available at `http://localhost:5000` by default. The `--debug` flag enables hot reloading when code changes are saved.
 
-#### Available Endpoints:
-
-- `GET /` - Root endpoint with API information
-- `GET /api/health` - Health check endpoint
-- TODO
-
 ## Backend Implementation
 
 The backend is structured into several key components, each responsible for a specific part of the experiment pipeline.
