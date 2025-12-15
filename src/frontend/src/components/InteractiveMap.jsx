@@ -83,6 +83,7 @@ function InteractiveMap({
                 if (!dayData) return null;
                 
                 return {
+                    name: station.name,
                     lat: station.lat,
                     lon: station.lon,
                     risk_level: dayData.risk_level,

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, useMap, LayersControl, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, LayersControl, CircleMarker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Map.css';
 
@@ -70,6 +70,9 @@ function Map({ wide, points = [] }) {
                 fillOpacity: 0.8
               }}
             >
+              <Tooltip direction="top" offset={[0, -10]} opacity={1}>
+                <span><b>{point.name || 'Unknown Location'}</b>: {point.risk_level}</span>
+              </Tooltip>
               <Popup>
                 <div style={{ textAlign: 'center' }}>
                   <strong>{point.name || 'Unknown Location'}</strong><br/>
