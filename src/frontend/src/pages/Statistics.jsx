@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Grid, Button, Box, Typography, Divider, Collapse } from '@mui/material';
+import { Button, Typography, Collapse } from '@mui/material';
 import Card from '../components/Card';
 import ForecastOverviewChart from '../components/charts/ForecastOverviewChart';
 import ForecastDistributionChart from '../components/charts/ForecastDistributionChart';
@@ -78,76 +78,67 @@ function Statistics() {
   const renderSection = (title, data, stats, onFetch, fetchLabel, isLoading) => {
     const hasData = data && data.length > 0;
 
+    if (!hasData) {
+      return (
+        <Card title={title}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+            <Button 
+                variant="contained" 
+                onClick={() => onFetch()} 
+                disabled={isLoading}
+            >
+                {isLoading ? 'Loading...' : fetchLabel}
+            </Button>
+          </div>
+        </Card>
+      );
+    }
+
     return (
       <>
-        <Grid item xs={12}>
-            <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>{title}</Typography>
-            {!hasData && (
-                <Button 
-                    variant="contained" 
-                    onClick={() => onFetch()} 
-                    disabled={isLoading}
-                    sx={{ mb: 2 }}
-                >
-                    {isLoading ? 'Loading...' : fetchLabel}
-                </Button>
-            )}
-            <Divider sx={{ mb: 2 }} />
-        </Grid>
-
-        {hasData && (
-            <>
-                <Grid item xs={12} md={8} sx={{ flex: { xs: '1 0 100%', md: 2 }, maxWidth: 'none' }}>
-                    <Card title={`${title} Overview`}>
-                        <ForecastOverviewChart data={stats.overviewData} />
-                    </Card>
-                </Grid>
-                <Grid item xs={12} md={4} sx={{ flex: { xs: '1 0 100%', md: 1 }, maxWidth: 'none' }}>
-                    <Card title={`${title} Risk Distribution`}>
-                        <ForecastDistributionChart data={stats.distributionData} />
-                    </Card>
-                </Grid>
-            </>
-        )}
+        <Card title={`${title} Overview`}>
+            <ForecastOverviewChart data={stats.overviewData} />
+        </Card>
+        <Card title={`${title} Risk Distribution`}>
+            <ForecastDistributionChart data={stats.distributionData} />
+        </Card>
       </>
     );
   };
 
   return (
-    <Grid container spacing={2} sx={{ width: '100%' }}>
-      <Grid item xs={12} sx={{ flex: { xs: '1 0 100%', md: '1 0 100%' }, maxWidth: 'none' }}>
-        <Card 
-            title="Dashboard Guide & Methodology" 
-            actions={
-                <Button size="small" onClick={() => setNotesExpanded(!notesExpanded)}>
-                    {notesExpanded ? 'Hide' : 'Show'}
-                </Button>
-            }
-        >
-          <Collapse in={notesExpanded}>
-            <div className="stack">
-                <Typography variant="body2" paragraph>
-                    This dashboard provides a comprehensive view of wildfire risks across monitored stations, split into <strong>Forecast</strong> (next 7 days) and <strong>History</strong> (past 7 days).
-                </Typography>
-                <Typography variant="subtitle2" gutterBottom>Risk Calculation Methodology:</Typography>
-                <Typography variant="body2" paragraph>
-                    The risk levels (<strong>Low, Moderate, High, Extreme</strong>) are computed using a hybrid model:
-                </Typography>
-                <ul className="list list--compact">
-                    <li className="list-item"><strong>Machine Learning:</strong> A predictive model analyzes historical patterns and current weather conditions.</li>
-                    <li className="list-item"><strong>Fire Weather Index (FWI):</strong> Standard meteorological indices are calculated to validate and refine the ML predictions.</li>
-                </ul>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                    The <strong>Overview</strong> charts show the count of stations at each risk level per day, while the <strong>Distribution</strong> charts show the aggregate share of risk levels for the selected period.
-                </Typography>
-            </div>
-          </Collapse>
-        </Card>
-      </Grid>
+    <div className="content-grid">
+      <Card 
+          title="Dashboard Guide & Methodology" 
+          actions={
+              <Button size="small" onClick={() => setNotesExpanded(!notesExpanded)}>
+                  {notesExpanded ? 'Hide' : 'Show'}
+              </Button>
+          }
+      >
+        <Collapse in={notesExpanded}>
+          <div className="stack">
+              <Typography variant="body2" paragraph>
+                  This dashboard provides a comprehensive view of wildfire risks across monitored stations, split into <strong>Forecast</strong> (next 7 days) and <strong>History</strong> (past 7 days).
+              </Typography>
+              <Typography variant="subtitle2" gutterBottom>Risk Calculation Methodology:</Typography>
+              <Typography variant="body2" paragraph>
+                  The risk levels (<strong>Low, Moderate, High, Extreme</strong>) are computed using a hybrid model:
+              </Typography>
+              <ul className="list list--compact">
+                  <li className="list-item"><strong>Machine Learning:</strong> A predictive model analyzes historical patterns and current weather conditions.</li>
+                  <li className="list-item"><strong>Fire Weather Index (FWI):</strong> Standard meteorological indices are calculated to validate and refine the ML predictions.</li>
+              </ul>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                  The <strong>Overview</strong> charts show the count of stations at each risk level per day, while the <strong>Distribution</strong> charts show the aggregate share of risk levels for the selected period.
+              </Typography>
+          </div>
+        </Collapse>
+      </Card>
 
       {renderSection("Forecast", forecastData, forecastStats, fetchForecasts, "Fetch Forecast Data", loadingForecast)}
       {renderSection("History", historyData, historyStats, fetchHistory, "Fetch Historical Data", loadingHistory)}
-    </Grid>
+    </div>
   );
 }
 
