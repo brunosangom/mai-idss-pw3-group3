@@ -1,9 +1,11 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pandas as pd
+import json
+import uuid
 from datetime import datetime
 from data_quality import DataQualityInspector
-from inference import initialize_predictor, get_fire_risk, get_predictor
+from inference import initialize_predictor, get_fire_risk, get_predictor, get_fire_risk_forecast
 import os
 import logging
 
@@ -29,6 +31,21 @@ def get_or_init_predictor():
         _predictor = initialize_predictor('model')
         logger.info("Predictor initialized successfully")
     return _predictor
+
+def log_batch_statistics(batch_type, total_requests, ml_used_count, fwi_used_count):
+    """Log statistics about batch requests."""
+    try:
+        log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, 'batch_statistics.log')
+        
+        timestamp = datetime.now().isoformat()
+        log_entry = f"{timestamp} - Type: {batch_type}, Total: {total_requests}, ML Used: {ml_used_count}, FWI Used: {fwi_used_count}\n"
+        
+        with open(log_file, 'a') as f:
+            f.write(log_entry)
+    except Exception as e:
+        logger.error(f"Failed to log batch statistics: {e}")
 
 @app.route('/')
 def index():
@@ -161,8 +178,11 @@ def fire_risk():
         # Get predictor
         predictor = get_or_init_predictor()
         
+        # Generate request ID
+        req_id = str(uuid.uuid4())
+        
         # Get fire risk assessment
-        result = get_fire_risk(lat, lon, date, predictor)
+        result = get_fire_risk(lat, lon, date, predictor, source="fire_risk_endpoint", request_id=req_id)
         
         # Add location and date to response
         result['location'] = {'latitude': lat, 'longitude': lon}
@@ -213,6 +233,10 @@ def fire_risk_batch():
         
         results = []
         total_start = datetime.now()
+        req_id = str(uuid.uuid4())
+        
+        ml_count = 0
+        fwi_count = 0
         
         for query in queries:
             lat = query.get('latitude') or query.get('lat')
@@ -228,16 +252,24 @@ def fire_risk_batch():
                 lon = float(lon)
                 date = datetime.strptime(date_str, "%Y-%m-%d") if date_str else datetime.now()
                 
-                result = get_fire_risk(lat, lon, date, predictor)
+                result = get_fire_risk(lat, lon, date, predictor, source="fire_risk_batch", request_id=req_id)
                 result['location'] = {'latitude': lat, 'longitude': lon}
                 result['date'] = date_str or date.strftime("%Y-%m-%d")
                 results.append(result)
+                
+                if result.get('ml_prediction') is not None:
+                    ml_count += 1
+                if result.get('fwi_value') is not None:
+                    fwi_count += 1
+                    
             except Exception as e:
                 results.append({
                     'error': str(e),
                     'location': {'latitude': lat, 'longitude': lon},
                     'date': date_str
                 })
+        
+        log_batch_statistics('prediction_batch', len(queries), ml_count, fwi_count)
         
         total_elapsed = (datetime.now() - total_start).total_seconds() * 1000
         
@@ -250,6 +282,301 @@ def fire_risk_batch():
     except Exception as e:
         logger.exception(f"Error in fire_risk_batch endpoint: {e}")
         return jsonify({'error': str(e), 'status': 'error'}), 500
+
+
+@app.route('/api/fire_risk/forecast', methods=['GET', 'POST'])
+def fire_risk_forecast():
+    """
+    Get fire risk forecast for a location for the next 8 days.
+    
+    GET: /api/fire_risk/forecast?lat=...&lon=...&date=...
+    POST: {"latitude": ..., "longitude": ..., "date": ...}
+    """
+    try:
+        if request.method == 'POST':
+            data = request.json or {}
+            lat = data.get('latitude') or data.get('lat')
+            lon = data.get('longitude') or data.get('lon')
+            date_str = data.get('date')
+        else:
+            lat = request.args.get('lat') or request.args.get('latitude')
+            lon = request.args.get('lon') or request.args.get('longitude')
+            date_str = request.args.get('date')
+            
+        if lat is None or lon is None:
+            return jsonify({'error': 'Missing latitude or longitude'}), 400
+            
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid coordinates'}), 400
+            
+        start_date = None
+        if date_str:
+            try:
+                start_date = datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
+            
+        results = get_fire_risk_forecast(lat, lon, days=8, start_date=start_date)
+        
+        ml_count = sum(1 for r in results if r.get('ml_prediction') is not None)
+        fwi_count = sum(1 for r in results if r.get('fwi_value') is not None)
+        log_batch_statistics('forecast_single_loc', len(results), ml_count, fwi_count)
+        
+        return jsonify({
+            'location': {'latitude': lat, 'longitude': lon},
+            'forecast': results,
+            'count': len(results)
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error in fire_risk_forecast: {e}")
+        return jsonify({'error': str(e), 'status': 'error'}), 500
+
+
+@app.route('/api/fire_risk/history', methods=['GET', 'POST'])
+def fire_risk_history():
+    """
+    Get fire risk history for a location for the past 7 days.
+    
+    GET: /api/fire_risk/history?lat=...&lon=...&date=...
+    POST: {"latitude": ..., "longitude": ..., "date": ...}
+    """
+    try:
+        if request.method == 'POST':
+            data = request.json or {}
+            lat = data.get('latitude') or data.get('lat')
+            lon = data.get('longitude') or data.get('lon')
+            date_str = data.get('date')
+        else:
+            lat = request.args.get('lat') or request.args.get('latitude')
+            lon = request.args.get('lon') or request.args.get('longitude')
+            date_str = request.args.get('date')
+            
+        if lat is None or lon is None:
+            return jsonify({'error': 'Missing latitude or longitude'}), 400
+            
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid coordinates'}), 400
+            
+        # Get predictor
+        predictor = get_or_init_predictor()
+        
+        results = []
+        req_id = str(uuid.uuid4())
+        if date_str:
+            try:
+                today = datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
+        
+        # Get history for past 7 days
+        for i in range(7, -1, -1):
+            date = today - pd.Timedelta(days=i)
+            try:
+                risk = get_fire_risk(lat, lon, date, predictor, source="fire_risk_history", request_id=req_id)
+                risk['date'] = date.strftime("%Y-%m-%d")
+                results.append(risk)
+            except Exception as e:
+                logger.warning(f"Failed to get history for {lat},{lon} on {date}: {e}")
+                continue
+                
+        return jsonify({
+            'location': {'latitude': lat, 'longitude': lon},
+            'history': results,
+            'count': len(results)
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error in fire_risk_history: {e}")
+        return jsonify({'error': str(e), 'status': 'error'}), 500
+
+
+@app.route('/api/stations', methods=['GET'])
+def get_stations():
+    """
+    Get list of weather stations from local CSV file - in production, this would use weather.gov API to fetch stations & automate updates.
+    Returns a list of {name, lat, lon} objects.
+    """
+    try:
+        # Load stations from local CSV file
+        # Path relative to src/backend/app.py -> ../../data/selected_stations.csv
+        csv_path = os.path.join(os.path.dirname(__file__), '../../data/selected_stations.csv')
+        
+        df = pd.read_csv(csv_path)
+        
+        all_stations = []
+        for _, row in df.iterrows():
+            try:
+                # Parse geometry string
+                geom = json.loads(row['geometry'])
+                coords = geom['coordinates']
+                lon, lat = coords[0], coords[1]
+                
+                all_stations.append({
+                    'name': row['name'],
+                    'lat': lat,
+                    'lon': lon,
+                    'id': row['stationIdentifier']
+                })
+            except Exception as e:
+                logger.warning(f"Skipping station due to error: {e}")
+                continue
+            
+        return jsonify({
+            'count': len(all_stations),
+            'stations': all_stations
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error fetching stations: {e}")
+        return jsonify({'error': str(e), 'status': 'error'}), 500
+
+
+@app.route('/api/init', methods=['GET'])
+def init_data():
+    """
+    Initialize application data: returns stations list from CSV.
+    """
+    return get_stations()
+
+
+@app.route('/api/predict_all', methods=['GET'])
+def predict_all():
+    """
+    Get predictions (forecast or history) for all stations.
+    Query params:
+    - mode: 'forecast' (default) or 'history'
+    - date: YYYY-MM-DD (REQUIRED)
+    """
+    try:
+        start_time = datetime.now()
+        mode = request.args.get('mode', 'forecast')
+        date_str = request.args.get('date')
+        
+        if not date_str:
+            return jsonify({'error': 'Date parameter is required'}), 400
+            
+        try:
+            base_date = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
+        
+        # Load stations
+        csv_path = os.path.join(os.path.dirname(__file__), '../../data/selected_stations.csv')
+        df = pd.read_csv(csv_path)
+        
+        stations = []
+        for _, row in df.iterrows():
+            try:
+                geom = json.loads(row['geometry'])
+                coords = geom['coordinates']
+                stations.append({
+                    'name': row['name'],
+                    'lat': coords[1],
+                    'lon': coords[0]
+                })
+            except:
+                continue
+        
+        #################################################### Temporary limit for testing
+        stations = stations[:5]
+        #################################################### TODO remove
+        
+        # Initialize predictor and ensure cache is loaded
+        predictor = get_or_init_predictor()
+        # Explicitly load data to satisfy "Wait until parquet cache is loaded"
+        predictor.data_store._load_data()
+        
+        results = []
+        req_id = str(uuid.uuid4())
+        
+        ml_count = 0
+        fwi_count = 0
+        total_predictions = 0
+        
+        # Process all stations
+        for station in stations:
+            lat, lon = station['lat'], station['lon']
+            
+            try:
+                if mode == 'history':
+                    # History logic (past 7 days relative to base_date)
+                    station_history = []
+                    for i in range(7, -1, -1):
+                        date = base_date - pd.Timedelta(days=i)
+                        try:
+                            risk = get_fire_risk(lat, lon, date, predictor, source="predict_all_history", request_id=req_id)
+                            risk['date'] = date.strftime("%Y-%m-%d")
+                            station_history.append(risk)
+                            
+                            total_predictions += 1
+                            if risk.get('ml_prediction') is not None:
+                                ml_count += 1
+                            if risk.get('fwi_value') is not None:
+                                fwi_count += 1
+                                
+                        except Exception:
+                            continue
+                            
+                    if station_history:
+                        results.append({
+                            'name': station['name'],
+                            'location': {'latitude': lat, 'longitude': lon},
+                            'history': station_history
+                        })
+                        
+                else:
+                    # Forecast logic (next 8 days relative to base_date)
+                    station_forecast = []
+                    for i in range(8):
+                        target_date = base_date + pd.Timedelta(days=i)
+                        try:
+                            # Use get_fire_risk to leverage ML model + FWI
+                            risk = get_fire_risk(lat, lon, target_date, predictor, source="predict_all_forecast", request_id=req_id)
+                            risk['date'] = target_date.strftime("%Y-%m-%d")
+                            station_forecast.append(risk)
+                            
+                            total_predictions += 1
+                            if risk.get('ml_prediction') is not None:
+                                ml_count += 1
+                            if risk.get('fwi_value') is not None:
+                                fwi_count += 1
+                                
+                        except Exception:
+                            continue
+                            
+                    if station_forecast:
+                        results.append({
+                            'name': station['name'],
+                            'location': {'latitude': lat, 'longitude': lon},
+                            'forecast': station_forecast
+                        })
+                        
+            except Exception as e:
+                logger.warning(f"Error processing station {station['name']}: {e}")
+                continue
+        
+        log_batch_statistics(f'predict_all_{mode}', total_predictions, ml_count, fwi_count)
+        
+        elapsed = (datetime.now() - start_time).total_seconds() * 1000
+        logger.info(f"Processed {len(results)} stations in {elapsed:.2f}ms")
+        
+        return jsonify({
+            'results': results,
+            'count': len(results),
+            'elapsed_ms': elapsed
+        })
+
+    except Exception as e:
+        logger.exception(f"Error in predict_all: {e}")
+        return jsonify({'error': str(e), 'status': 'error'}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

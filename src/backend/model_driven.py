@@ -41,7 +41,25 @@ class FWICalcalculator:
         """
 
         noon_samples = self.fetcher.fetch_data(lat, lon, date, past_days)
+        
+        return self.calculate_fwi_series(
+            noon_samples, lat, 
+            overwintering=overwintering,
+            dc_start=dc_start,
+            dmc_start=dmc_start,
+            ffmc_start=ffmc_start,
+            use_season_mask=use_season_mask
+        )
 
+    def calculate_fwi_series(self, noon_samples: pd.DataFrame, lat: float,
+                             overwintering: bool = True,
+                             dc_start: float = 15,
+                             dmc_start: float = 6,
+                             ffmc_start: float = 85,
+                             use_season_mask = False) -> List[Dict]:
+        """
+        Calculate FWI series from a DataFrame of noon weather samples.
+        """
         # --- Build xarray Dataset with explicit UNITS (FIX) ---
         # ensure numeric dtypes (avoids object dtype sneaking in)
         ns = noon_samples.astype(float).copy()

@@ -13,15 +13,13 @@ The fire risk assessment combines both approaches following these rules:
   - FWI Very High/Extreme -> 'Extreme'
 """
 
-import warnings
 import logging
-import os
 import json
-import hashlib
+import csv
 import time as time_module
 import math
 from pathlib import Path
-from typing import Optional, Tuple, Dict, Any, Literal
+from typing import Optional, Tuple, Dict, Any, Literal, List
 from datetime import datetime, timedelta, date
 
 import numpy as np
@@ -32,8 +30,7 @@ import torch
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Suppress pint unit redefinition warnings from xclim (used by model_driven module)
-# These are harmless - xclim loads custom unit definitions that overlap with pint defaults
+# Suppress excessive logging from pint (used in FWI calculations)
 logging.getLogger('pint.util').setLevel(logging.ERROR)
 
 from config import ExperimentConfig
@@ -222,8 +219,8 @@ class InferenceDataStore:
             info = index[key]
             return (info['latitude'], info['longitude'])
         
-        # Find nearest location within threshold (e.g., 0.5 degrees)
-        threshold = 0.5  # degrees
+        # Find nearest location within threshold
+        threshold = 1.0  # degrees
         min_dist = float('inf')
         nearest = None
         
@@ -837,7 +834,9 @@ def get_fwi(latitude: float, longitude: float, date: datetime,
 
 
 def get_fire_risk(latitude: float, longitude: float, date: datetime,
-                  predictor: Optional[WildfirePredictor] = None) -> Dict[str, Any]:
+                  predictor: Optional[WildfirePredictor] = None,
+                  source: str = "unknown",
+                  request_id: str = "none") -> Dict[str, Any]:
     """
     Get combined fire risk assessment from data-driven and model-driven components.
     
@@ -853,6 +852,8 @@ def get_fire_risk(latitude: float, longitude: float, date: datetime,
         longitude: Location longitude
         date: Date for risk assessment
         predictor: Optional pre-initialized predictor instance
+        source: Source of the request (e.g., 'overview', 'forecast', 'api')
+        request_id: Unique ID of the parent request
         
     Returns:
         Dict with fire risk assessment including:
@@ -921,6 +922,32 @@ def get_fire_risk(latitude: float, longitude: float, date: datetime,
     
     elapsed_time = (time_module.perf_counter() - start_time) * 1000  # Convert to ms
     
+    # --- LOGGING START ---
+    try:
+        log_file = Path(__file__).parent / "logs" / "inference_log.csv"
+        file_exists = log_file.exists()
+        
+        with open(log_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(['timestamp', 'latitude', 'longitude', 'date', 'risk_level', 'elapsed_ms', 'ml_prediction', 'fwi_level', 'source', 'request_id'])
+            
+            writer.writerow([
+                datetime.now().isoformat(),
+                latitude,
+                longitude,
+                date.strftime("%Y-%m-%d") if hasattr(date, 'strftime') else str(date),
+                risk_level,
+                round(elapsed_time, 2),
+                ml_prediction,
+                fwi_level,
+                source,
+                request_id
+            ])
+    except Exception as e:
+        logger.error(f"Failed to log inference: {e}")
+    # --- LOGGING END ---
+    
     return {
         'risk_level': risk_level,
         'ml_prediction': ml_prediction,
@@ -956,6 +983,38 @@ def initialize_predictor(model_dir: str = "model") -> WildfirePredictor:
 def get_predictor() -> Optional[WildfirePredictor]:
     """Get the global predictor instance."""
     return _predictor
+
+
+def get_fire_risk_forecast(latitude: float, longitude: float, days: int = 8, start_date: Optional[datetime] = None) -> List[Dict[str, Any]]:
+    """
+    Get fire risk forecast for a given location for the next `days` days.
+    Uses the configured data source (CSV) for "forecast" (simulated).
+    """
+    try:
+        predictor = get_predictor()
+        if predictor is None:
+             # Fallback if not initialized (though it should be)
+             predictor = initialize_predictor('model')
+
+        base_date = start_date if start_date else datetime.now()
+        results = []
+        
+        for i in range(days):
+            target_date = base_date + timedelta(days=i)
+            try:
+                # Use get_fire_risk to leverage ML model + FWI from CSV
+                risk = get_fire_risk(latitude, longitude, target_date, predictor, source="fire_risk_forecast")
+                risk['date'] = target_date.strftime("%Y-%m-%d")
+                results.append(risk)
+            except Exception as e:
+                logger.warning(f"Error in forecast for {target_date}: {e}")
+                continue
+                
+        return results
+        
+    except Exception as e:
+        logger.exception(f"Error in get_fire_risk_forecast: {e}")
+        return []
 
 
 if __name__ == "__main__":

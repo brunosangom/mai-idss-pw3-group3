@@ -1,7 +1,7 @@
 import React from 'react';
 
 import SidebarItem from './SidebarItem';
-import { FiHome, FiBarChart2, FiTrendingUp, FiClock, FiMap, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiHome, FiBarChart2, FiTrendingUp, FiClock, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import './Sidebar.css';
 
 function Sidebar({ collapsed = false, onToggle }) {
@@ -25,7 +25,6 @@ function Sidebar({ collapsed = false, onToggle }) {
           <SidebarItem to="/statistics" icon={FiBarChart2} label="Statistics" />
           <SidebarItem to="/forecast" icon={FiTrendingUp} label="Forecast" />
           <SidebarItem to="/historical" icon={FiClock} label="Historical Data" />
-          <SidebarItem to="/map" icon={FiMap} label="Map" />
         </ul>
       </nav>
     </div>
