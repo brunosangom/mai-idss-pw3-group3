@@ -32,6 +32,21 @@ def get_or_init_predictor():
         logger.info("Predictor initialized successfully")
     return _predictor
 
+def log_batch_statistics(batch_type, total_requests, ml_used_count, fwi_used_count):
+    """Log statistics about batch requests."""
+    try:
+        log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, 'batch_statistics.log')
+        
+        timestamp = datetime.now().isoformat()
+        log_entry = f"{timestamp} - Type: {batch_type}, Total: {total_requests}, ML Used: {ml_used_count}, FWI Used: {fwi_used_count}\n"
+        
+        with open(log_file, 'a') as f:
+            f.write(log_entry)
+    except Exception as e:
+        logger.error(f"Failed to log batch statistics: {e}")
+
 @app.route('/')
 def index():
     """Root endpoint"""
@@ -220,6 +235,9 @@ def fire_risk_batch():
         total_start = datetime.now()
         req_id = str(uuid.uuid4())
         
+        ml_count = 0
+        fwi_count = 0
+        
         for query in queries:
             lat = query.get('latitude') or query.get('lat')
             lon = query.get('longitude') or query.get('lon')
@@ -238,12 +256,20 @@ def fire_risk_batch():
                 result['location'] = {'latitude': lat, 'longitude': lon}
                 result['date'] = date_str or date.strftime("%Y-%m-%d")
                 results.append(result)
+                
+                if result.get('ml_prediction') is not None:
+                    ml_count += 1
+                if result.get('fwi_value') is not None:
+                    fwi_count += 1
+                    
             except Exception as e:
                 results.append({
                     'error': str(e),
                     'location': {'latitude': lat, 'longitude': lon},
                     'date': date_str
                 })
+        
+        log_batch_statistics('prediction_batch', len(queries), ml_count, fwi_count)
         
         total_elapsed = (datetime.now() - total_start).total_seconds() * 1000
         
@@ -294,6 +320,10 @@ def fire_risk_forecast():
                 return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
             
         results = get_fire_risk_forecast(lat, lon, days=8, start_date=start_date)
+        
+        ml_count = sum(1 for r in results if r.get('ml_prediction') is not None)
+        fwi_count = sum(1 for r in results if r.get('fwi_value') is not None)
+        log_batch_statistics('forecast_single_loc', len(results), ml_count, fwi_count)
         
         return jsonify({
             'location': {'latitude': lat, 'longitude': lon},
@@ -466,6 +496,10 @@ def predict_all():
         results = []
         req_id = str(uuid.uuid4())
         
+        ml_count = 0
+        fwi_count = 0
+        total_predictions = 0
+        
         # Process all stations
         for station in stations:
             lat, lon = station['lat'], station['lon']
@@ -480,6 +514,13 @@ def predict_all():
                             risk = get_fire_risk(lat, lon, date, predictor, source="predict_all_history", request_id=req_id)
                             risk['date'] = date.strftime("%Y-%m-%d")
                             station_history.append(risk)
+                            
+                            total_predictions += 1
+                            if risk.get('ml_prediction') is not None:
+                                ml_count += 1
+                            if risk.get('fwi_value') is not None:
+                                fwi_count += 1
+                                
                         except Exception:
                             continue
                             
@@ -500,6 +541,13 @@ def predict_all():
                             risk = get_fire_risk(lat, lon, target_date, predictor, source="predict_all_forecast", request_id=req_id)
                             risk['date'] = target_date.strftime("%Y-%m-%d")
                             station_forecast.append(risk)
+                            
+                            total_predictions += 1
+                            if risk.get('ml_prediction') is not None:
+                                ml_count += 1
+                            if risk.get('fwi_value') is not None:
+                                fwi_count += 1
+                                
                         except Exception:
                             continue
                             
@@ -513,7 +561,9 @@ def predict_all():
             except Exception as e:
                 logger.warning(f"Error processing station {station['name']}: {e}")
                 continue
-                
+        
+        log_batch_statistics(f'predict_all_{mode}', total_predictions, ml_count, fwi_count)
+        
         elapsed = (datetime.now() - start_time).total_seconds() * 1000
         logger.info(f"Processed {len(results)} stations in {elapsed:.2f}ms")
         
