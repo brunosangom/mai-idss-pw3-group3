@@ -1,5 +1,7 @@
 # Ignore everything in the data folder
 /data/*
+!Wildfire_Dataset_Reduced.csv
+!README_Reduced_Dataset.md
 
 # Except .gitkeep
 !/data/.gitkeep
@@ -15,3 +17,5 @@ __pycache__
 notebooks/data/
 src/backend/results/
 docs/internal_docs/
+
+scripts/

@@ -48,7 +48,7 @@ class OpenMeteoFetcher(WeatherFetcher):
             f"&past_days={past_days}"
             f"&forecast_days={max(days, 7)}"
         )
-        resp = requests.get(url, timeout=30)
+        resp = requests.get(url, timeout=60)
         resp.raise_for_status()
         js = resp.json()
         hourly = js.get("hourly", {})

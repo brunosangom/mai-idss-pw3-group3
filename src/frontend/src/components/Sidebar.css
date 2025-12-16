@@ -100,14 +100,14 @@
 }
 
 /* Collapsed state: narrow, hide labels and title; center icons */
-.app-layout.sidebar-collapsed .sidebar { width: 56px; }
-.app-layout.sidebar-collapsed .sidebar h2 { display: none; }
-.app-layout.sidebar-collapsed .sidebar .sidebar-label { display: none; }
-.app-layout.sidebar-collapsed .sidebar .sidebar-header { justify-content: center; }
-.app-layout.sidebar-collapsed .sidebar .sidebar-toggle { margin-left: auto; margin-right: auto; }
-.app-layout.sidebar-collapsed .sidebar nav ul { align-items: center; }
-.app-layout.sidebar-collapsed .sidebar nav li { width: auto; }
-.app-layout.sidebar-collapsed .sidebar nav a {
+.sidebar.is-collapsed { width: 56px; }
+.sidebar.is-collapsed h2 { display: none; }
+.sidebar.is-collapsed .sidebar-label { display: none; }
+.sidebar.is-collapsed .sidebar-header { justify-content: center; }
+.sidebar.is-collapsed .sidebar-toggle { margin-left: auto; margin-right: auto; }
+.sidebar.is-collapsed nav ul { align-items: center; }
+.sidebar.is-collapsed nav li { width: auto; }
+.sidebar.is-collapsed nav a {
 	justify-content: center;
 	gap: 0;
 	width: 32px;
@@ -116,7 +116,7 @@
 	margin-left: auto;
 	margin-right: auto;
 }
-.app-layout.sidebar-collapsed .sidebar .sidebar-icon {
+.sidebar.is-collapsed .sidebar-icon {
 	width: 20px;
 	height: 20px;
 	flex: 0 0 20px;
