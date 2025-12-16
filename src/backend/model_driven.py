@@ -122,13 +122,13 @@ class FWICalcalculator:
         """Simple classification of FWI levels."""
         if pd.isna(fwi):
             return "Out of fire season"
-        elif fwi < 5:
+        elif fwi < 11.2:
             return "Low"
-        elif fwi < 12:
+        elif fwi < 21.3:
             return "Moderate"
-        elif fwi < 21:
+        elif fwi < 38:
             return "High"
-        elif fwi < 32:
+        elif fwi < 50:
             return "Very High"
         else:
             return "Extreme"
